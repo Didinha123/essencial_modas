@@ -2,7 +2,9 @@
 // LojaFacil - scripts.js
 // ================================================
 
-const API_URL = '<?= ScriptApp.getService().getUrl() ?>';
+// Cole aqui a URL do seu Web App do Google Apps Script
+// Exemplo: 'https://script.google.com/macros/s/ABC123.../exec'
+const API_URL = 'https://script.google.com/macros/s/AKfycbw4S-eiTQ1kuEQXEWhlZF3EQzQp678J0skPtRCW5DfQTJWJiLU7xa6LGzHOVcUFqkeUhQ/exec';
 
 // ── API ─────────────────────────────────────────
 async function api(action, payload = {}) {
