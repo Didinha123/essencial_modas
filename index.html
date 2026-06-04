@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LojaFacil</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">&#128247;</div>
+    <div>
+      <div class="logo-text">LojaFacil</div>
+      <div class="logo-sub">Gestao Inteligente</div>
+    </div>
+  </div>
+  <nav>
+    <a class="active" onclick="nav('dashboard')"><div class="nav-icon">&#127968;</div><span class="nav-label">Dashboard</span></a>
+    <a onclick="nav('pdv')"><div class="nav-icon">&#128722;</div><span class="nav-label">Ponto de Venda</span></a>
+    <a onclick="nav('produtos')"><div class="nav-icon">&#128230;</div><span class="nav-label">Produtos</span></a>
+    <a onclick="nav('clientes')"><div class="nav-icon">&#128101;</div><span class="nav-label">Clientes</span></a>
+    <a onclick="nav('funcionarios')"><div class="nav-icon">&#128100;</div><span class="nav-label">Funcionarios</span></a>
+    <a onclick="nav('financeiro')"><div class="nav-icon">&#128176;</div><span class="nav-label">Financeiro</span></a>
+    <a onclick="nav('vendas')"><div class="nav-icon">&#128203;</div><span class="nav-label">Historico</span></a>
+    <a onclick="nav('relatorio')"><div class="nav-icon">&#128202;</div><span class="nav-label">Relatorios</span></a>
+    <a onclick="nav('config')"><div class="nav-icon">&#9881;</div><span class="nav-label">Configuracoes</span></a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sf-label">Banco de dados</div>
+    <div class="sf-val">Google Sheets</div>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div id="main">
+  <div id="topbar">
+    <div class="topbar-left">
+      <div>
+        <h1 id="page-title">Dashboard</h1>
+        <div class="breadcrumb" id="page-sub">Visao geral da loja</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-chip"><div class="dot"></div>Conectado</div>
+      <div class="clock-chip" id="clock"></div>
+    </div>
+  </div>
+
+  <div id="content">
+
+    <!-- DASHBOARD -->
+    <div id="sec-dashboard" class="section active">
+      <div id="dash-alerts"></div>
+      <div class="kpi-grid" id="kpi-row">
+        <div class="loading-state"><div class="spinner"></div> Carregando...</div>
+      </div>
+      <div class="chart-grid">
+        <div class="chart-box">
+          <h3>Vendas - ultimos 7 dias</h3>
+          <div class="chart-container"><canvas id="chart-vendas"></canvas></div>
+        </div>
+        <div class="chart-box">
+          <h3>Por Pagamento</h3>
+          <div class="chart-container"><canvas id="chart-pgto"></canvas></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><div class="ct-icon">&#128203;</div> Ultimas Vendas</div>
+        <div id="dashboard-table"><div class="loading-state"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
+    <!-- PDV -->
+    <div id="sec-pdv" class="section">
+      <div id="pdv-layout">
+        <div id="pdv-items">
+          <div class="card-title" style="margin-bottom:16px"><div class="ct-icon">&#128230;</div> Adicionar Produto</div>
+          <div class="form-row">
+            <div class="form-group" style="grid-column:span 3">
+              <label>Codigo de Barras ou Nome</label>
+              <input id="pdv-search" placeholder="Digite codigo ou nome..." oninput="pdvSearch()" onkeydown="if(event.key==='Enter')pdvAddByCode()">
+            </div>
+            <div class="form-group">
+              <label>Qtd</label>
+              <input id="pdv-qty" type="number" value="1" min="1">
+            </div>
+          </div>
+          <div id="pdv-results"></div>
+          <hr class="divider">
+          <div class="card-title" style="margin-bottom:10px"><div class="ct-icon">&#128722;</div> Carrinho</div>
+          <div id="cart-list">
+            <div class="empty-state"><div class="es-icon">&#128722;</div><div class="es-text">Carrinho vazio</div></div>
+          </div>
+        </div>
+        <div id="pdv-sidebar">
+          <div>
+            <div class="pdv-section-title">Cliente</div>
+            <select id="pdv-cliente" style="width:100%;border:1.5px solid var(--border);border-radius:9px;padding:9px 12px;background:#fff;font-family:inherit;font-size:.92rem"></select>
+          </div>
+          <div>
+            <div class="pdv-section-title">Forma de Pagamento</div>
+            <div class="pgto-grid">
+              <div class="pgto-btn active" onclick="selectPgto(this,'dinheiro')">Dinheiro</div>
+              <div class="pgto-btn" onclick="selectPgto(this,'credito')">Credito</div>
+              <div class="pgto-btn" onclick="selectPgto(this,'debito')">Debito</div>
+              <div class="pgto-btn" onclick="selectPgto(this,'pix')">Pix</div>
+              <div class="pgto-btn" onclick="selectPgto(this,'boleto')">Boleto</div>
+              <div class="pgto-btn" onclick="selectPgto(this,'vale')">Vale</div>
+            </div>
+          </div>
+          <div class="juros-box" id="juros-box" style="display:none">
+            <div class="form-group">
+              <label>Parcelas</label>
+              <select id="parcelas" onchange="calcJuros()">
+                <option value="1">1x sem juros</option>
+                <option value="2">2x</option>
+                <option value="3">3x</option>
+                <option value="6">6x</option>
+                <option value="12">12x</option>
+              </select>
+            </div>
+            <div id="juros-result" style="margin-top:8px;font-size:.85rem;color:var(--muted)"></div>
+          </div>
+          <div class="juros-box" id="boleto-box" style="display:none">
+            <div class="form-group">
+              <label>Juros Boleto % (a.m.)</label>
+              <input id="boleto-juros" type="number" step="0.1" min="0" value="0" oninput="calcBoleto()">
+            </div>
+            <div class="form-group" style="margin-top:8px">
+              <label>Vencimento</label>
+              <input id="boleto-venc" type="date">
+            </div>
+            <div id="boleto-result" style="margin-top:8px;font-size:.85rem;color:var(--muted)"></div>
+          </div>
+          <hr class="divider" style="margin:0">
+          <div class="total-box">
+            <div class="total-row"><span style="color:var(--muted)">Subtotal</span><span id="sub-val">R$ 0,00</span></div>
+            <div class="total-row">
+              <span style="color:var(--muted)">Desconto (R$)</span>
+              <input id="desc-val" type="number" min="0" value="0" step="0.01" style="width:80px;border:1px solid var(--border);border-radius:7px;padding:4px 8px;text-align:right;font-size:.88rem" oninput="renderTotal()">
+            </div>
+            <div class="total-row grand"><span>TOTAL</span><span id="cart-total">R$ 0,00</span></div>
+          </div>
+          <button class="btn btn-success btn-lg" style="width:100%;justify-content:center" onclick="finalizarVenda()">Finalizar Venda</button>
+          <button class="btn btn-outline" style="width:100%;justify-content:center" onclick="clearCart()">Limpar Carrinho</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PRODUTOS -->
+    <div id="sec-produtos" class="section">
+      <div class="page-header">
+        <div><h2>Produtos</h2><div class="ph-sub">Catalogo e estoque</div></div>
+        <button class="btn btn-primary" onclick="toggleForm('form-produto')">+ Novo Produto</button>
+      </div>
+      <div class="card" id="form-produto" style="display:none">
+        <div class="card-title"><div class="ct-icon">+</div> Cadastrar Produto</div>
+        <div class="form-row">
+          <div class="form-group"><label>Nome</label><input id="p-nome" placeholder="Ex: Camiseta Basica"></div>
+          <div class="form-group"><label>Categoria</label>
+            <select id="p-cat"><option>Camiseta</option><option>Calca</option><option>Vestido</option><option>Shorts</option><option>Jaqueta</option><option>Saia</option><option>Acessorio</option><option>Outro</option></select>
+          </div>
+          <div class="form-group"><label>Tamanho</label>
+            <select id="p-tam"><option>PP</option><option>P</option><option>M</option><option>G</option><option>GG</option><option>XG</option><option>Unico</option></select>
+          </div>
+          <div class="form-group"><label>Cor</label><input id="p-cor" placeholder="Ex: Branco"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Custo (R$)</label><input id="p-custo" type="number" step="0.01" placeholder="0,00"></div>
+          <div class="form-group"><label>Preco Venda (R$)</label><input id="p-preco" type="number" step="0.01" placeholder="0,00"></div>
+          <div class="form-group"><label>Estoque</label><input id="p-estoque" type="number" placeholder="0"></div>
+          <div class="form-group"><label>Codigo de Barras</label><input id="p-barcode" placeholder="Auto-gerado"></div>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-primary" onclick="salvarProduto()">Salvar</button>
+          <button class="btn btn-outline" onclick="imprimirEtiqueta()">Gerar Etiqueta</button>
+          <button class="btn btn-ghost" onclick="toggleForm('form-produto')">Cancelar</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="search-bar">
+          <div class="search-wrap"><input id="search-prod" placeholder="Buscar por nome ou codigo..." oninput="carregarProdutos()"></div>
+        </div>
+        <div class="table-wrap" id="table-produtos"><div class="loading-state"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
+    <!-- CLIENTES -->
+    <div id="sec-clientes" class="section">
+      <div class="page-header">
+        <div><h2>Clientes</h2><div class="ph-sub">Base de clientes da loja</div></div>
+        <button class="btn btn-primary" onclick="toggleForm('form-cliente')">+ Novo Cliente</button>
+      </div>
+      <div class="card" id="form-cliente" style="display:none">
+        <div class="card-title"><div class="ct-icon">+</div> Cadastrar Cliente</div>
+        <div class="form-row">
+          <div class="form-group"><label>Nome</label><input id="c-nome" placeholder="Nome completo"></div>
+          <div class="form-group"><label>CPF</label><input id="c-cpf" placeholder="000.000.000-00" oninput="maskCPF(this)"></div>
+          <div class="form-group"><label>Telefone / WhatsApp</label><input id="c-tel" placeholder="(00) 00000-0000" oninput="maskTel(this)"></div>
+          <div class="form-group"><label>E-mail</label><input id="c-email" type="email"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Nascimento</label><input id="c-nasc" type="date"></div>
+          <div class="form-group" style="grid-column:span 3"><label>Endereco</label><input id="c-end" placeholder="Rua, no, bairro, cidade"></div>
+        </div>
+        <div class="form-group" style="margin-bottom:14px"><label>Observacoes</label><textarea id="c-obs"></textarea></div>
+        <div class="btn-group">
+          <button class="btn btn-primary" onclick="salvarCliente()">Salvar</button>
+          <button class="btn btn-ghost" onclick="toggleForm('form-cliente')">Cancelar</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="search-bar">
+          <div class="search-wrap"><input id="search-cli" placeholder="Buscar por nome, CPF ou telefone..." oninput="carregarClientes()"></div>
+        </div>
+        <div class="table-wrap" id="table-clientes"><div class="loading-state"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
+    <!-- FUNCIONARIOS -->
+    <div id="sec-funcionarios" class="section">
+      <div class="page-header">
+        <div><h2>Funcionarios</h2><div class="ph-sub">Equipe da loja</div></div>
+        <button class="btn btn-primary" onclick="toggleForm('form-func')">+ Novo Funcionario</button>
+      </div>
+      <div class="card" id="form-func" style="display:none">
+        <div class="card-title"><div class="ct-icon">+</div> Cadastrar Funcionario</div>
+        <div class="form-row">
+          <div class="form-group"><label>Nome</label><input id="f-nome"></div>
+          <div class="form-group"><label>CPF</label><input id="f-cpf" oninput="maskCPF(this)"></div>
+          <div class="form-group"><label>Cargo</label>
+            <select id="f-cargo"><option>Vendedor(a)</option><option>Gerente</option><option>Caixa</option><option>Estoquista</option><option>Proprietario</option></select>
+          </div>
+          <div class="form-group"><label>Telefone</label><input id="f-tel" oninput="maskTel(this)"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Salario (R$)</label><input id="f-salario" type="number" step="0.01"></div>
+          <div class="form-group"><label>Admissao</label><input id="f-admissao" type="date"></div>
+          <div class="form-group"><label>Comissao (%)</label><input id="f-comissao" type="number" step="0.1"></div>
+          <div class="form-group"><label>E-mail</label><input id="f-email" type="email"></div>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-primary" onclick="salvarFuncionario()">Salvar</button>
+          <button class="btn btn-ghost" onclick="toggleForm('form-func')">Cancelar</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="search-bar">
+          <div class="search-wrap"><input id="search-func" placeholder="Buscar por nome ou cargo..." oninput="carregarFuncionarios()"></div>
+        </div>
+        <div class="table-wrap" id="table-funcionarios"><div class="loading-state"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
+    <!-- FINANCEIRO -->
+    <div id="sec-financeiro" class="section">
+      <div class="page-header">
+        <div><h2>Financeiro</h2><div class="ph-sub">Receitas, despesas e fluxo de caixa</div></div>
+        <button class="btn btn-primary" onclick="toggleForm('form-fin')">+ Lancamento</button>
+      </div>
+      <div class="fin-summary">
+        <div class="fin-box receita"><div class="fb-label">Receitas</div><div class="fb-val" id="fin-receitas">--</div></div>
+        <div class="fin-box despesa"><div class="fb-label">Despesas</div><div class="fb-val" id="fin-despesas">--</div></div>
+        <div class="fin-box saldo"><div class="fb-label">Saldo</div><div class="fb-val" id="fin-saldo">--</div></div>
+      </div>
+      <div class="card" id="form-fin" style="display:none">
+        <div class="card-title"><div class="ct-icon">+</div> Novo Lancamento</div>
+        <div class="form-row">
+          <div class="form-group"><label>Tipo</label>
+            <select id="fin-tipo"><option value="Receita">Receita</option><option value="Despesa">Despesa</option></select>
+          </div>
+          <div class="form-group"><label>Categoria</label>
+            <select id="fin-cat"><option>Vendas</option><option>Outros Servicos</option><option>Fornecedores</option><option>Aluguel</option><option>Marketing</option><option>Salarios</option><option>Impostos</option><option>Outros</option></select>
+          </div>
+          <div class="form-group"><label>Valor (R$)</label><input id="fin-valor" type="number" step="0.01" placeholder="0,00"></div>
+          <div class="form-group"><label>Data</label><input id="fin-data" type="date"></div>
+        </div>
+        <div class="form-group" style="margin-bottom:14px"><label>Descricao</label><input id="fin-desc" placeholder="Descreva o lancamento..."></div>
+        <div class="btn-group">
+          <button class="btn btn-primary" onclick="salvarFinanceiro()">Salvar</button>
+          <button class="btn btn-ghost" onclick="toggleForm('form-fin')">Cancelar</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="search-bar">
+          <div class="search-wrap"><input id="search-fin" placeholder="Buscar lancamentos..." oninput="carregarFinanceiro()"></div>
+          <select id="filter-fin-tipo" onchange="carregarFinanceiro()" style="border:1.5px solid var(--border);border-radius:9px;padding:9px 14px;font-size:.88rem;background:#fff;cursor:pointer">
+            <option value="">Todos</option><option value="Receita">Receitas</option><option value="Despesa">Despesas</option>
+          </select>
+        </div>
+        <div class="table-wrap" id="table-financeiro"><div class="loading-state"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
+    <!-- HISTORICO -->
+    <div id="sec-vendas" class="section">
+      <div class="page-header"><div><h2>Historico de Vendas</h2><div class="ph-sub">Todas as vendas registradas</div></div></div>
+      <div class="card">
+        <div class="search-bar">
+          <div class="search-wrap"><input id="search-venda" placeholder="Buscar por cliente ou pagamento..." oninput="carregarVendas()"></div>
+          <input type="date" id="filter-data" onchange="carregarVendas()" style="border:1.5px solid var(--border);border-radius:9px;padding:9px 12px;font-size:.88rem;background:#fff">
+        </div>
+        <div class="table-wrap" id="table-vendas"><div class="loading-state"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
+    <!-- RELATORIO -->
+    <div id="sec-relatorio" class="section">
+      <div class="page-header"><div><h2>Relatorios</h2><div class="ph-sub">Analise de vendas e desempenho</div></div></div>
+      <div class="card">
+        <div class="card-title"><div class="ct-icon">&#128269;</div> Filtros</div>
+        <div class="form-row">
+          <div class="form-group"><label>Data Inicio</label><input id="rel-ini" type="date"></div>
+          <div class="form-group"><label>Data Fim</label><input id="rel-fim" type="date"></div>
+          <div class="form-group"><label>Pagamento</label>
+            <select id="rel-pgto"><option value="">Todos</option><option value="dinheiro">Dinheiro</option><option value="credito">Credito</option><option value="debito">Debito</option><option value="pix">Pix</option><option value="boleto">Boleto</option></select>
+          </div>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-primary" onclick="gerarRelatorio()">Gerar Relatorio</button>
+          <button class="btn btn-outline" onclick="window.print()">Imprimir</button>
+        </div>
+      </div>
+      <div id="rel-result"></div>
+    </div>
+
+    <!-- CONFIG -->
+    <div id="sec-config" class="section">
+      <div class="page-header"><div><h2>Configuracoes</h2><div class="ph-sub">Dados da loja e preferencias</div></div></div>
+      <div class="card">
+        <div class="card-title"><div class="ct-icon">&#127978;</div> Dados da Loja</div>
+        <div class="form-row">
+          <div class="form-group"><label>Nome da Loja</label><input id="cfg-nome"></div>
+          <div class="form-group"><label>CNPJ / CPF</label><input id="cfg-cnpj"></div>
+          <div class="form-group"><label>Telefone</label><input id="cfg-tel"></div>
+          <div class="form-group"><label>Cidade / Estado</label><input id="cfg-cidade"></div>
+        </div>
+        <div class="form-group" style="margin-bottom:18px"><label>Endereco</label><input id="cfg-end"></div>
+        <hr class="divider">
+        <div class="card-title" style="margin-bottom:14px"><div class="ct-icon">&#128179;</div> Juros Credito</div>
+        <div class="form-row">
+          <div class="form-group"><label>2x (%)</label><input id="j2" type="number" step="0.1" value="0"></div>
+          <div class="form-group"><label>3x (%)</label><input id="j3" type="number" step="0.1" value="2"></div>
+          <div class="form-group"><label>6x (%)</label><input id="j6" type="number" step="0.1" value="4"></div>
+          <div class="form-group"><label>12x (%)</label><input id="j12" type="number" step="0.1" value="8"></div>
+        </div>
+        <div class="btn-group"><button class="btn btn-primary" onclick="salvarConfigUI()">Salvar Configuracoes</button></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL VENDA -->
+<div class="modal-overlay" id="modal-venda">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modal-venda-title">Venda</h2>
+      <button class="modal-close" onclick="closeModal('modal-venda')">x</button>
+    </div>
+    <div id="modal-venda-body"></div>
+    <div class="btn-group" style="margin-top:18px" id="modal-venda-actions"></div>
+  </div>
+</div>
+
+<!-- MODAL ETIQUETA -->
+<div class="modal-overlay" id="modal-etiqueta">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Etiqueta</h2>
+      <button class="modal-close" onclick="closeModal('modal-etiqueta')">x</button>
+    </div>
+    <div id="etiqueta-preview" style="border:2px dashed var(--border);border-radius:12px;padding:20px;text-align:center;margin-bottom:16px"></div>
+    <div class="btn-group"><button class="btn btn-primary" onclick="window.print()">Imprimir</button></div>
+  </div>
+</div>
+
+<div class="print-area" id="print-area"></div>
+<div id="toast"></div>
+
+<script src="scripts.js"></script>
+</body>
+</html>
