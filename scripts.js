@@ -6,14 +6,19 @@
 // Exemplo: 'https://script.google.com/macros/s/ABC123.../exec'
 const API_URL = 'https://script.google.com/macros/s/AKfycbw4S-eiTQ1kuEQXEWhlZF3EQzQp678J0skPtRCW5DfQTJWJiLU7xa6LGzHOVcUFqkeUhQ/exec';
 
+
 // ── API ─────────────────────────────────────────
 async function api(action, payload = {}) {
   try {
+    // Content-Type: text/plain evita preflight CORS e o redirect do GAS
     const r = await fetch(API_URL, {
       method: 'POST',
-      body: JSON.stringify({ action, payload })
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action, payload }),
+      redirect: 'follow'
     });
-    const j = await r.json();
+    const text = await r.text();
+    const j = JSON.parse(text);
     if (!j.ok) throw new Error(j.error);
     return j.data;
   } catch (e) {
