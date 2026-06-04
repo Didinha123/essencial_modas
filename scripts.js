@@ -7,16 +7,16 @@
 const API_URL = 'https://script.google.com/macros/s/AKfycbw4S-eiTQ1kuEQXEWhlZF3EQzQp678J0skPtRCW5DfQTJWJiLU7xa6LGzHOVcUFqkeUhQ/exec';
 
 
+
+
 // ── API ─────────────────────────────────────────
 async function api(action, payload = {}) {
   try {
-    // Content-Type: text/plain evita preflight CORS e o redirect do GAS
-    const r = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action, payload }),
-      redirect: 'follow'
-    });
+    // Usa GET com parametros na URL — evita bloqueio CORS do GAS em chamadas externas
+    const url = API_URL
+      + '?action=' + encodeURIComponent(action)
+      + '&payload=' + encodeURIComponent(JSON.stringify(payload));
+    const r = await fetch(url, { redirect: 'follow' });
     const text = await r.text();
     const j = JSON.parse(text);
     if (!j.ok) throw new Error(j.error);
