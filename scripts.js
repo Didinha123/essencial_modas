@@ -7,8 +7,6 @@
 const API_URL = 'https://script.google.com/macros/s/AKfycby65UlF2NwV_XPHbiuhvazGS3b26JNbgljmzd7uCfnMct5gPZ3ZntfFGzTPTTJMaM78GA/exec';
 
 
-
-
 // ── API ─────────────────────────────────────────
 async function api(action, payload = {}) {
   try {
