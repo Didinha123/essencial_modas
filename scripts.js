@@ -10,10 +10,9 @@ const API_URL = 'https://script.google.com/macros/s/AKfycby65UlF2NwV_XPHbiuhvazG
 // ── API ─────────────────────────────────────────
 async function api(action, payload = {}) {
   try {
-    const r = await fetch(API_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action, payload })
-    });
+    // Usa GET com ?d= — mesmo padrão do TDA Açaí (funciona cross-origin)
+    const url = API_URL + '?d=' + encodeURIComponent(JSON.stringify({ action, payload }));
+    const r = await fetch(url);
     const text = await r.text();
     const j = JSON.parse(text);
     if (!j.ok) throw new Error(j.error);
@@ -724,6 +723,4 @@ function whatsapp(tel, msg) {
 function openModal(id)  { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
-document.querySelectorAll('.modal-overlay').forEach(m => {
-  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
-});
+docum
