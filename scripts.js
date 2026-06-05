@@ -4,7 +4,7 @@
 
 // Cole aqui a URL do seu Web App do Google Apps Script
 // Exemplo: 'https://script.google.com/macros/s/ABC123.../exec'
-const API_URL = 'https://script.google.com/macros/s/AKfycby65UlF2NwV_XPHbiuhvazGS3b26JNbgljmzd7uCfnMct5gPZ3ZntfFGzTPTTJMaM78GA/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbyeRqBusdasATgSrJqGA8cqOb2jSaVdFvt8_ax8p_n-x_Y3xA04ik8_YILslTjgMqoU/exec';
 
 
 // ── API ─────────────────────────────────────────
