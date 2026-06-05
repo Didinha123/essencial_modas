@@ -10,11 +10,10 @@ const API_URL = 'https://script.google.com/macros/s/AKfycby65UlF2NwV_XPHbiuhvazG
 // ── API ─────────────────────────────────────────
 async function api(action, payload = {}) {
   try {
-    // Usa GET com parametros na URL — evita bloqueio CORS do GAS em chamadas externas
-    const url = API_URL
-      + '?action=' + encodeURIComponent(action)
-      + '&payload=' + encodeURIComponent(JSON.stringify(payload));
-    const r = await fetch(url, { redirect: 'follow' });
+    const r = await fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action, payload })
+    });
     const text = await r.text();
     const j = JSON.parse(text);
     if (!j.ok) throw new Error(j.error);
