@@ -7,6 +7,7 @@
 const SUPABASE_URL = 'https://xtgokhgzfdazreyqovrk.supabase.co';   // ex: https://xyzxyz.supabase.co
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0Z29raGd6ZmRhenJleXFvdnJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4NDk3NzMsImV4cCI6MjA5NjQyNTc3M30.UGaApUPR87qs9-s3ObKjva_ED86lGC8PyO7dnFjiEcM';         // anon/public key
 
+
 // ── Helper Supabase ───────────────────────────────
 async function sb(table, method = 'GET', body = null, filter = '') {
   const opts = {
