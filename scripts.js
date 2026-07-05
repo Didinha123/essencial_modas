@@ -98,7 +98,7 @@ function renderClock() {
 function toast(msg, dur = 3500, type = '') {
   const el = document.getElementById('toast');
   el.textContent = msg;
-  el.style.background = type === 'danger' ? '#B91C1C' : type === 'success' ? '#065F46' : '#1E293B';
+  el.style.background = type === 'danger' ? '#B91C1C' : type === 'success' ? '#065F46' : '#0A0800';
   el.style.display = 'block';
   clearTimeout(el._t);
   el._t = setTimeout(() => el.style.display = 'none', dur);
@@ -140,7 +140,7 @@ async function renderDashboard() {
 
   let alertsHTML = '';
   if (semEstoque > 0) alertsHTML += `<div class="alert-bar danger"><span class="alert-text">${semEstoque} produto(s) sem estoque!</span></div>`;
-  if (estBaixo   > 0) alertsHTML += `<div class="alert-bar"><span class="alert-text" style="color:#92400E">${estBaixo} produto(s) com estoque baixo (5 ou menos)</span></div>`;
+  if (estBaixo   > 0) alertsHTML += `<div class="alert-bar"><span class="alert-text">${estBaixo} produto(s) com estoque baixo (5 ou menos)</span></div>`;
   document.getElementById('dash-alerts').innerHTML = alertsHTML;
 
   document.getElementById('kpi-row').innerHTML = `
@@ -185,7 +185,7 @@ async function renderDashboard() {
     type: 'bar',
     data: {
       labels: labels7,
-      datasets: [{ label: 'Vendas', data: vals7, backgroundColor: 'rgba(124,58,237,.2)', borderColor: '#7C3AED', borderWidth: 2, borderRadius: 6 }]
+      datasets: [{ label: 'Vendas', data: vals7, backgroundColor: 'rgba(201,168,76,0.2)', borderColor: '#C9A84C', borderWidth: 2, borderRadius: 6 }]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
@@ -198,14 +198,14 @@ async function renderDashboard() {
   });
 
   const pgtoMap = {};
-  vendas.forEach(v => { const k = v.pgto.split(' ')[0]; pgtoMap[k] = (pgtoMap[k] || 0) + v.total; });
+  vendas.forEach(v => { const k = (v.pgto || '').split(' ')[0]; pgtoMap[k] = (pgtoMap[k] || 0) + v.total; });
   if (chartPgto) chartPgto.destroy();
   if (Object.keys(pgtoMap).length) {
     chartPgto = new Chart(document.getElementById('chart-pgto').getContext('2d'), {
       type: 'doughnut',
       data: {
         labels: Object.keys(pgtoMap),
-        datasets: [{ data: Object.values(pgtoMap), backgroundColor: ['#7C3AED','#EC4899','#10B981','#F59E0B','#3B82F6','#EF4444'], borderWidth: 2, borderColor: '#fff' }]
+        datasets: [{ data: Object.values(pgtoMap), backgroundColor: ['#C9A84C','#8B6914','#10B981','#F59E0B','#3B82F6','#EF4444'], borderWidth: 2, borderColor: '#fff' }]
       },
       options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 10 } } } }
     });
@@ -217,7 +217,7 @@ async function renderDashboard() {
        ${ultimas.map(v => `<tr>
          <td style="color:var(--muted);font-size:.82rem">${new Date(v.data).toLocaleString('pt-BR')}</td>
          <td><b>${v.cliente || '-'}</b></td>
-         <td><span class="badge badge-purple">${v.pgto.split(' ')[0]}</span></td>
+         <td><span class="badge badge-purple">${(v.pgto || '').split(' ')[0]}</span></td>
          <td style="color:var(--muted)">${(v.itens || []).length} itens</td>
          <td><b style="color:var(--p1)">${fmtMoney(v.total)}</b></td>
        </tr>`).join('')}</tbody></table>`
@@ -290,7 +290,7 @@ function showEtiqueta(prod) {
   const preview = document.getElementById('etiqueta-preview');
   preview.innerHTML = `
     <div style="font-family:monospace;max-width:280px;margin:0 auto;background:#fff;padding:16px;border-radius:8px">
-      <div style="font-size:.8rem;color:var(--muted);margin-bottom:2px">${cfg.nome || 'Minha Loja'}</div>
+      <div style="font-size:.8rem;color:var(--muted);margin-bottom:2px">${cfg.nome || 'Essencial Modas'}</div>
       <div style="font-size:1.05rem;font-weight:700;margin-bottom:2px">${prod.nome}</div>
       <div style="font-size:.85rem;color:var(--muted);margin-bottom:4px">${prod.tamanho || ''}${prod.cor ? ' - ' + prod.cor : ''}</div>
       <div style="font-size:1.4rem;font-weight:800;color:var(--p1);margin-bottom:8px">${fmtMoney(prod.preco)}</div>
@@ -344,6 +344,9 @@ async function carregarClientesPDV() {
   const sel  = document.getElementById('pdv-cliente');
   if (!sel) return;
   const clis = await api('listarClientes', { q: '' }).catch(() => []);
+  // Guarda mapa de nome -> telefone para WhatsApp do recibo
+  window._clientesTel = {};
+  clis.forEach(c => { if (c.tel) window._clientesTel[c.nome] = c.tel; });
   sel.innerHTML = '<option value="">-- Consumidor final --</option>' + clis.map(c => `<option value="${c.nome}">${c.nome}</option>`).join('');
 }
 
@@ -423,7 +426,7 @@ async function carregarResumoFin() {
   document.getElementById('fin-despesas').textContent = fmtMoney(Math.abs(r.despesas));
   const sEl = document.getElementById('fin-saldo');
   sEl.textContent = fmtMoney(r.saldo);
-  sEl.style.color = r.saldo >= 0 ? '#6D28D9' : '#B91C1C';
+  sEl.style.color = r.saldo >= 0 ? '#8B6914' : '#B91C1C';
 }
 
 async function carregarFinanceiro() {
@@ -465,7 +468,7 @@ function pdvSearch() {
   const q   = document.getElementById('pdv-search').value.toLowerCase();
   const res = document.getElementById('pdv-results');
   if (!q) { res.innerHTML = ''; return; }
-  const prods = produtosCache.filter(p => p.nome.toLowerCase().includes(q) || p.barcode.includes(q)).slice(0, 6);
+  const prods = produtosCache.filter(p => p.nome.toLowerCase().includes(q) || String(p.barcode).includes(q)).slice(0, 6);
   res.innerHTML = prods.length
     ? prods.map(p => `
         <div class="prod-result-item" onclick="addToCart(${p.id})">
@@ -524,8 +527,9 @@ function renderCart() {
 function renderTotal() {
   const sub  = cart.reduce((s, i) => s + i.preco * i.qty, 0);
   const desc = parseFloat(document.getElementById('desc-val').value) || 0;
+  const liquido = Math.max(0, sub - desc);
   document.getElementById('sub-val').textContent    = fmtMoney(sub);
-  document.getElementById('cart-total').textContent = fmtMoney(Math.max(0, sub - desc));
+  document.getElementById('cart-total').textContent = fmtMoney(liquido);
   calcJuros();
   calcBoleto();
 }
@@ -536,6 +540,7 @@ function selectPgto(el, tipo) {
   pgtoAtual = tipo;
   document.getElementById('juros-box').style.display  = tipo === 'credito' ? 'block' : 'none';
   document.getElementById('boleto-box').style.display = tipo === 'boleto'  ? 'block' : 'none';
+  renderTotal();
 }
 
 function getTotal() {
@@ -552,8 +557,10 @@ function calcJuros() {
   document.getElementById('juros-result').innerHTML = pct > 0
     ? `<span style="color:var(--danger)">${parc}x de ${fmtMoney(totalJ / parc)} - ${pct}% juros - Total: ${fmtMoney(totalJ)}</span>`
     : `<span style="color:var(--success)">${parc}x de ${fmtMoney(totalJ / parc)} sem juros</span>`;
+  document.getElementById('cart-total').textContent = fmtMoney(totalJ);
 }
 
+// ── BOLETO com total atualizado no campo TOTAL ────
 function calcBoleto() {
   if (pgtoAtual !== 'boleto') return;
   const pct    = parseFloat(document.getElementById('boleto-juros').value) || 0;
@@ -561,6 +568,7 @@ function calcBoleto() {
   document.getElementById('boleto-result').innerHTML = pct > 0
     ? `<span style="color:var(--danger)">Total com juros: ${fmtMoney(totalJ)}</span>`
     : `<span style="color:var(--muted)">Total: ${fmtMoney(totalJ)}</span>`;
+  document.getElementById('cart-total').textContent = fmtMoney(totalJ);
 }
 
 function clearCart() { cart = []; renderCart(); }
@@ -596,14 +604,20 @@ async function finalizarVenda() {
 
   const r = await api('registrarVenda', venda).catch(() => null);
   if (!r) { toast('Erro ao registrar venda!'); return; }
+
+  // Atualiza estoque no cache local
+  cart.forEach(item => {
+    const p = produtosCache.find(x => String(x.id) === String(item.id));
+    if (p) p.estoque = Math.max(0, p.estoque - item.qty);
+  });
+
   showModalVenda({ ...venda, id: r.id, data: new Date().toISOString() });
   clearCart();
   document.getElementById('desc-val').value = 0;
-  produtosCache = await api('listarProdutos', { q: '' }).catch(() => produtosCache);
 }
 
 function showModalVenda(v) {
-  const loja = cfg.nome || 'Minha Loja';
+  const loja = cfg.nome || 'Essencial Modas';
   document.getElementById('modal-venda-title').textContent = 'Venda Finalizada!';
   document.getElementById('modal-venda-body').innerHTML = `
     <div class="nota" id="nota-content">
@@ -623,10 +637,28 @@ function showModalVenda(v) {
       </div>
       <div class="nota-footer">Obrigado pela preferencia!</div>
     </div>`;
+
+  // Botão WhatsApp aparece se o cliente tiver telefone cadastrado
+  const tel = window._clientesTel?.[v.cliente] || '';
+  const btnWhats = tel
+    ? `<button class="btn btn-success" onclick='enviarWhatsapp("${tel}", ${JSON.stringify(v)})'>&#128262; WhatsApp</button>`
+    : '';
+
   document.getElementById('modal-venda-actions').innerHTML = `
     <button class="btn btn-primary" onclick="imprimirNota()">Imprimir Recibo</button>
+    ${btnWhats}
     <button class="btn btn-outline" onclick="closeModal('modal-venda')">Fechar</button>`;
+
   openModal('modal-venda');
+}
+
+// ── WHATSAPP RECIBO ───────────────────────────────
+function enviarWhatsapp(tel, v) {
+  const loja  = cfg.nome || 'Essencial Modas';
+  const itens = (v.itens || []).map(i => `  • ${i.nome} x${i.qty} = ${fmtMoney(i.preco * i.qty)}`).join('\n');
+  const desc  = v.desconto > 0 ? `\nDesconto: - ${fmtMoney(v.desconto)}` : '';
+  const msg   = `*${loja}*\n\n*RECIBO DE VENDA #${v.id}*\n${new Date(v.data).toLocaleString('pt-BR')}\n\n${itens}${desc}\n\n*TOTAL: ${fmtMoney(v.total)}*\nPagamento: ${v.pgto}\n\nObrigado pela preferencia! &#128150;`;
+  window.open('https://wa.me/55' + tel.replace(/\D/g, '') + '?text=' + encodeURIComponent(msg), '_blank');
 }
 
 function imprimirNota() {
