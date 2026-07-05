@@ -1,14 +1,7 @@
 // ================================================
-// LojaFacil - scripts.js  (Supabase)
-// ================================================
-
-// 1. Crie um projeto em https://supabase.com
-// 2. Vá em Project Settings → API e cole:
-// ================================================
 // LojaFacil - scripts.js (Google Sheets)
 // ================================================
 
-// Cole aqui a URL gerada ao publicar o Web App
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzNaePYnFV-KG9X36UsBJX-jAKcBe8UW2rr2u1EzwQ5YI-T3msXF95szoX3Q3QEl5Claw/exec';
 
 async function api(action, payload = {}) {
@@ -28,226 +21,6 @@ async function api(action, payload = {}) {
   }
 }
 
-// ... resto do scripts.js permanece igual
-// ── Helper Supabase ───────────────────────────────
-async function sb(table, method = 'GET', body = null, filter = '') {
-  const opts = {
-    method,
-    headers: {
-      'apikey': SUPABASE_KEY,
-      'Authorization': 'Bearer ' + SUPABASE_KEY,
-      'Content-Type': 'application/json',
-      'Prefer': method === 'POST' ? 'return=representation' : ''
-    }
-  };
-  if (body) opts.body = JSON.stringify(body);
-  const res = await fetch(SUPABASE_URL + '/rest/v1/' + table + filter, opts);
-  if (!res.ok && res.status !== 204) {
-    const err = await res.text();
-    throw new Error(err);
-  }
-  if (res.status === 204 || method === 'DELETE') return null;
-  return res.json();
-}
-
-// ── API — mapeia as actions para Supabase ─────────
-async function api(action, payload = {}) {
-  try {
-    // PRODUTOS
-    if (action === 'salvarProduto') {
-      const r = await sb('produtos', 'POST', {
-        nome: payload.nome, categoria: payload.categoria, tamanho: payload.tamanho,
-        cor: payload.cor, custo: +payload.custo||0, preco: +payload.preco||0,
-        estoque: +payload.estoque||0, barcode: payload.barcode || gerarBarcode()
-      });
-      return r?.[0] || {};
-    }
-    if (action === 'listarProdutos') {
-      const q = payload.q || '';
-      let filter = '?order=criado_em.asc';
-      if (q) filter += `&or=(nome.ilike.*${q}*,barcode.ilike.*${q}*)`;
-      const r = await sb('produtos', 'GET', null, filter);
-      return (r || []).map(p => ({
-        id:p.id, nome:p.nome, categoria:p.categoria, tamanho:p.tamanho,
-        cor:p.cor, custo:+p.custo, preco:+p.preco, estoque:p.estoque, barcode:p.barcode
-      }));
-    }
-    if (action === 'deletarProduto') {
-      await sb('produtos', 'DELETE', null, '?id=eq.'+payload.id);
-      return { ok: true };
-    }
-
-    // CLIENTES
-    if (action === 'salvarCliente') {
-      const r = await sb('clientes', 'POST', {
-        nome:payload.nome, cpf:payload.cpf, telefone:payload.tel,
-        email:payload.email, nascimento:payload.nasc||null, endereco:payload.end, obs:payload.obs
-      });
-      return r?.[0] || {};
-    }
-    if (action === 'listarClientes') {
-      const q = payload.q || '';
-      let filter = '?order=criado_em.asc';
-      if (q) filter += `&or=(nome.ilike.*${q}*,cpf.ilike.*${q}*,telefone.ilike.*${q}*)`;
-      const r = await sb('clientes', 'GET', null, filter);
-      return (r || []).map(c => ({
-        id:c.id, nome:c.nome, cpf:c.cpf, tel:c.telefone,
-        email:c.email, nasc:c.nascimento, end:c.endereco, obs:c.obs
-      }));
-    }
-    if (action === 'deletarCliente') {
-      await sb('clientes', 'DELETE', null, '?id=eq.'+payload.id);
-      return { ok: true };
-    }
-
-    // FUNCIONÁRIOS
-    if (action === 'salvarFuncionario') {
-      const r = await sb('funcionarios', 'POST', {
-        nome:payload.nome, cpf:payload.cpf, cargo:payload.cargo, telefone:payload.tel,
-        salario:+payload.salario||0, admissao:payload.admissao||null,
-        comissao:+payload.comissao||0, email:payload.email
-      });
-      return r?.[0] || {};
-    }
-    if (action === 'listarFuncionarios') {
-      const q = payload.q || '';
-      let filter = '?order=criado_em.asc';
-      if (q) filter += `&or=(nome.ilike.*${q}*,cargo.ilike.*${q}*)`;
-      const r = await sb('funcionarios', 'GET', null, filter);
-      return (r || []).map(f => ({
-        id:f.id, nome:f.nome, cpf:f.cpf, cargo:f.cargo, tel:f.telefone,
-        salario:+f.salario, admissao:f.admissao, comissao:+f.comissao, email:f.email
-      }));
-    }
-    if (action === 'deletarFuncionario') {
-      await sb('funcionarios', 'DELETE', null, '?id=eq.'+payload.id);
-      return { ok: true };
-    }
-
-    // VENDAS
-    if (action === 'registrarVenda') {
-      // Decrementa estoque
-      for (const item of (payload.itens || [])) {
-        const prod = await sb('produtos', 'GET', null, '?id=eq.'+item.id+'&select=estoque');
-        if (prod?.[0]) {
-          await sb('produtos', 'PATCH', { estoque: Math.max(0, prod[0].estoque - item.qty) }, '?id=eq.'+item.id);
-        }
-      }
-      // Salva venda
-      const r = await sb('vendas', 'POST', {
-        cliente: payload.cliente||'', pagamento: payload.pgto,
-        itens: payload.itens, subtotal: payload.subtotal,
-        desconto: payload.desconto, total: payload.total
-      });
-      // Lança receita no financeiro
-      const vId = r?.[0]?.id;
-      if (vId) {
-        await sb('financeiro', 'POST', {
-          tipo:'Receita', categoria:'Vendas',
-          descricao:'Venda #'+vId+(payload.cliente?' - '+payload.cliente:''),
-          valor: payload.total, referencia: String(vId)
-        });
-      }
-      return { id: vId };
-    }
-    if (action === 'listarVendas') {
-      const q = payload.q || '';
-      const data = payload.data || '';
-      let filter = '?order=criado_em.desc&limit=300';
-      if (q) filter += `&or=(cliente.ilike.*${q}*,pagamento.ilike.*${q}*)`;
-      if (data) filter += `&criado_em=gte.${data}T00:00:00`;
-      const r = await sb('vendas', 'GET', null, filter);
-      return (r || []).map(v => ({
-        id:v.id, data:v.criado_em, cliente:v.cliente, pgto:v.pagamento,
-        itens:v.itens||[], subtotal:+v.subtotal, desconto:+v.desconto, total:+v.total
-      }));
-    }
-
-    // FINANCEIRO
-    if (action === 'salvarFinanceiro') {
-      const valor = payload.tipo === 'Receita' ? Math.abs(+payload.valor) : -Math.abs(+payload.valor);
-      const r = await sb('financeiro', 'POST', {
-        tipo:payload.tipo, categoria:payload.categoria, descricao:payload.descricao,
-        valor, referencia:payload.referencia||''
-      });
-      return r?.[0] || {};
-    }
-    if (action === 'listarFinanceiro') {
-      const q = payload.q || '';
-      const tipo = payload.tipo || '';
-      let filter = '?order=criado_em.desc&limit=500';
-      if (tipo) filter += '&tipo=eq.'+tipo;
-      if (q) filter += `&or=(descricao.ilike.*${q}*,categoria.ilike.*${q}*)`;
-      const r = await sb('financeiro', 'GET', null, filter);
-      return (r || []).map(f => ({
-        id:f.id, data:f.criado_em, tipo:f.tipo, categoria:f.categoria,
-        descricao:f.descricao, valor:+f.valor, referencia:f.referencia
-      }));
-    }
-    if (action === 'deletarFinanceiro') {
-      await sb('financeiro', 'DELETE', null, '?id=eq.'+payload.id);
-      return { ok: true };
-    }
-    if (action === 'resumoFinanceiro') {
-      const r = await sb('financeiro', 'GET', null, '?order=criado_em.asc');
-      const rows = r || [];
-      const receitas = rows.filter(x=>x.tipo==='Receita').reduce((s,x)=>s+(+x.valor||0),0);
-      const despesas = rows.filter(x=>x.tipo==='Despesa').reduce((s,x)=>s+(+x.valor||0),0);
-      const agora = new Date();
-      const porDia = {};
-      for (let i=29;i>=0;i--) {
-        const d=new Date(agora); d.setDate(d.getDate()-i);
-        porDia[d.toISOString().split('T')[0]]=0;
-      }
-      rows.filter(x=>x.tipo==='Receita').forEach(x=>{
-        const dia=String(x.criado_em).split('T')[0];
-        if(porDia[dia]!==undefined) porDia[dia]+=(+x.valor||0);
-      });
-      return { receitas, despesas, saldo:receitas+despesas, porDia };
-    }
-    if (action === 'relatorio') {
-      const vendas = await api('listarVendas', {});
-      let filtradas = vendas;
-      if (payload.ini) filtradas = filtradas.filter(v=>String(v.data)>=payload.ini);
-      if (payload.fim) filtradas = filtradas.filter(v=>String(v.data)<=payload.fim+'T23:59:59');
-      if (payload.pgto) filtradas = filtradas.filter(v=>v.pgto&&v.pgto.startsWith(payload.pgto));
-      const total = filtradas.reduce((s,v)=>s+(v.total||0),0);
-      const qtdItens = filtradas.reduce((s,v)=>s+(v.itens||[]).reduce((a,i)=>a+i.qty,0),0);
-      const porPgto={}, porProd={}, porDia={};
-      filtradas.forEach(v=>{
-        const k=(v.pgto||'').split(' ')[0]; porPgto[k]=(porPgto[k]||0)+v.total;
-        const dia=String(v.data).split('T')[0]; porDia[dia]=(porDia[dia]||0)+v.total;
-        (v.itens||[]).forEach(i=>{
-          if(!porProd[i.nome]) porProd[i.nome]={qty:0,total:0};
-          porProd[i.nome].qty+=i.qty; porProd[i.nome].total+=i.preco*i.qty;
-        });
-      });
-      return {total,qtdVendas:filtradas.length,qtdItens,ticketMedio:filtradas.length?total/filtradas.length:0,porPgto,porProd,porDia};
-    }
-
-    // CONFIG
-    if (action === 'getConfig') {
-      const r = await sb('config', 'GET', null, '?select=chave,valor');
-      const cfg = {};
-      (r||[]).forEach(x=>cfg[x.chave]=x.valor);
-      return cfg;
-    }
-    if (action === 'salvarConfig') {
-      for (const [chave, valor] of Object.entries(payload)) {
-        const ex = await sb('config','GET',null,'?chave=eq.'+chave+'&select=id');
-        if (ex?.[0]) { await sb('config','PATCH',{valor},'?chave=eq.'+chave); }
-        else { await sb('config','POST',{chave,valor}); }
-      }
-      return { ok: true };
-    }
-
-    throw new Error('Ação desconhecida: ' + action);
-  } catch (e) {
-    toast('Erro: ' + e.message, 4000, 'danger');
-    throw e;
-  }
-}
-
 // ── Helper barcode ────────────────────────────────
 function gerarBarcode() {
   const base='789'+String(Date.now()).slice(-9);
@@ -255,7 +28,7 @@ function gerarBarcode() {
   return base+((10-(s%10))%10);
 }
 
-// ── ESTADO ──────────────────────────────────────
+// ── ESTADO ───────────────────────────────────────
 let cart = [];
 let pgtoAtual = 'dinheiro';
 let cfg = {};
@@ -365,13 +138,11 @@ async function renderDashboard() {
   const semEstoque = prods.filter(p => p.estoque <= 0).length;
   const estBaixo   = prods.filter(p => p.estoque > 0 && p.estoque <= 5).length;
 
-  // Alertas
   let alertsHTML = '';
   if (semEstoque > 0) alertsHTML += `<div class="alert-bar danger"><span class="alert-text">${semEstoque} produto(s) sem estoque!</span></div>`;
   if (estBaixo   > 0) alertsHTML += `<div class="alert-bar"><span class="alert-text" style="color:#92400E">${estBaixo} produto(s) com estoque baixo (5 ou menos)</span></div>`;
   document.getElementById('dash-alerts').innerHTML = alertsHTML;
 
-  // KPIs
   document.getElementById('kpi-row').innerHTML = `
     <div class="kpi-card green">
       <div class="kpi-icon">&#128176;</div>
@@ -402,7 +173,6 @@ async function renderDashboard() {
       <div class="kpi-label">Saldo Caixa</div>
     </div>`;
 
-  // Chart vendas 7 dias
   const labels7 = [], vals7 = [];
   for (let i = 6; i >= 0; i--) {
     const d = new Date(); d.setDate(d.getDate() - i);
@@ -427,7 +197,6 @@ async function renderDashboard() {
     }
   });
 
-  // Chart pagamento
   const pgtoMap = {};
   vendas.forEach(v => { const k = v.pgto.split(' ')[0]; pgtoMap[k] = (pgtoMap[k] || 0) + v.total; });
   if (chartPgto) chartPgto.destroy();
@@ -442,7 +211,6 @@ async function renderDashboard() {
     });
   }
 
-  // Ultimas vendas
   const ultimas = vendas.slice(0, 8);
   document.getElementById('dashboard-table').innerHTML = ultimas.length
     ? `<table><thead><tr><th>Data</th><th>Cliente</th><th>Pagamento</th><th>Itens</th><th>Total</th></tr></thead><tbody>
@@ -777,11 +545,10 @@ function getTotal() {
 
 function calcJuros() {
   if (pgtoAtual !== 'credito') return;
-  const parc  = parseInt(document.getElementById('parcelas').value);
-  const jMap  = { 1: 0, 2: +(cfg.j2||0), 3: +(cfg.j3||2), 6: +(cfg.j6||4), 12: +(cfg.j12||8) };
-  const pct   = jMap[parc] || 0;
-  const total = getTotal();
-  const totalJ = total * (1 + pct / 100);
+  const parc   = parseInt(document.getElementById('parcelas').value);
+  const jMap   = { 1: 0, 2: +(cfg.j2||0), 3: +(cfg.j3||2), 6: +(cfg.j6||4), 12: +(cfg.j12||8) };
+  const pct    = jMap[parc] || 0;
+  const totalJ = getTotal() * (1 + pct / 100);
   document.getElementById('juros-result').innerHTML = pct > 0
     ? `<span style="color:var(--danger)">${parc}x de ${fmtMoney(totalJ / parc)} - ${pct}% juros - Total: ${fmtMoney(totalJ)}</span>`
     : `<span style="color:var(--success)">${parc}x de ${fmtMoney(totalJ / parc)} sem juros</span>`;
@@ -954,5 +721,3 @@ function whatsapp(tel, msg) {
 
 function openModal(id)  { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-
-docum
