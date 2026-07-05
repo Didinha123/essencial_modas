@@ -4,10 +4,31 @@
 
 // 1. Crie um projeto em https://supabase.com
 // 2. Vá em Project Settings → API e cole:
-const SUPABASE_URL = 'https://xtgokhgzfdazreyqovrk.supabase.co';   // ex: https://xyzxyz.supabase.co
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0Z29raGd6ZmRhenJleXFvdnJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4NDk3NzMsImV4cCI6MjA5NjQyNTc3M30.UGaApUPR87qs9-s3ObKjva_ED86lGC8PyO7dnFjiEcM';         // anon/public key
+// ================================================
+// LojaFacil - scripts.js (Google Sheets)
+// ================================================
 
+// Cole aqui a URL gerada ao publicar o Web App
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzNaePYnFV-KG9X36UsBJX-jAKcBe8UW2rr2u1EzwQ5YI-T3msXF95szoX3Q3QEl5Claw/exec';
 
+async function api(action, payload = {}) {
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action, payload }),
+      redirect: 'follow'
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || 'Erro desconhecido');
+    return json.data;
+  } catch (e) {
+    toast('Erro: ' + e.message, 4000, 'danger');
+    throw e;
+  }
+}
+
+// ... resto do scripts.js permanece igual
 // ── Helper Supabase ───────────────────────────────
 async function sb(table, method = 'GET', body = null, filter = '') {
   const opts = {
