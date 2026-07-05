@@ -344,7 +344,6 @@ async function carregarClientesPDV() {
   const sel  = document.getElementById('pdv-cliente');
   if (!sel) return;
   const clis = await api('listarClientes', { q: '' }).catch(() => []);
-  // Guarda mapa de nome -> telefone para WhatsApp do recibo
   window._clientesTel = {};
   clis.forEach(c => { if (c.tel) window._clientesTel[c.nome] = c.tel; });
   sel.innerHTML = '<option value="">-- Consumidor final --</option>' + clis.map(c => `<option value="${c.nome}">${c.nome}</option>`).join('');
@@ -560,7 +559,6 @@ function calcJuros() {
   document.getElementById('cart-total').textContent = fmtMoney(totalJ);
 }
 
-// ── BOLETO com total atualizado no campo TOTAL ────
 function calcBoleto() {
   if (pgtoAtual !== 'boleto') return;
   const pct    = parseFloat(document.getElementById('boleto-juros').value) || 0;
@@ -605,7 +603,6 @@ async function finalizarVenda() {
   const r = await api('registrarVenda', venda).catch(() => null);
   if (!r) { toast('Erro ao registrar venda!'); return; }
 
-  // Atualiza estoque no cache local
   cart.forEach(item => {
     const p = produtosCache.find(x => String(x.id) === String(item.id));
     if (p) p.estoque = Math.max(0, p.estoque - item.qty);
@@ -616,6 +613,7 @@ async function finalizarVenda() {
   document.getElementById('desc-val').value = 0;
 }
 
+// ── MODAL VENDA ───────────────────────────────────
 function showModalVenda(v) {
   const loja = cfg.nome || 'Essencial Modas';
   document.getElementById('modal-venda-title').textContent = 'Venda Finalizada!';
@@ -638,10 +636,12 @@ function showModalVenda(v) {
       <div class="nota-footer">Obrigado pela preferencia!</div>
     </div>`;
 
-  // Botão WhatsApp aparece se o cliente tiver telefone cadastrado
-  const tel = window._clientesTel?.[v.cliente] || '';
-  const btnWhats = tel
-    ? `<button class="btn btn-success" onclick='enviarWhatsapp("${tel}", ${JSON.stringify(v)})'>&#128262; WhatsApp</button>`
+  // Salva venda atual globalmente para uso no botão WhatsApp
+  window._vendaAtual = v;
+
+  // Botão WhatsApp aparece sempre que há cliente selecionado (não Consumidor final)
+  const btnWhats = v.cliente
+    ? `<button class="btn btn-success" onclick="enviarWhatsappRecibo()">&#128262; WhatsApp</button>`
     : '';
 
   document.getElementById('modal-venda-actions').innerHTML = `
@@ -653,11 +653,19 @@ function showModalVenda(v) {
 }
 
 // ── WHATSAPP RECIBO ───────────────────────────────
-function enviarWhatsapp(tel, v) {
+function enviarWhatsappRecibo() {
+  const v   = window._vendaAtual;
+  if (!v) return;
+  // Tenta pegar o tel do mapa; se não tiver, pede ao usuário
+  let tel = (window._clientesTel || {})[v.cliente] || '';
+  if (!tel) {
+    tel = prompt('Informe o telefone do cliente com DDD (ex: 11999998888):', '');
+    if (!tel) return;
+  }
   const loja  = cfg.nome || 'Essencial Modas';
   const itens = (v.itens || []).map(i => `  • ${i.nome} x${i.qty} = ${fmtMoney(i.preco * i.qty)}`).join('\n');
   const desc  = v.desconto > 0 ? `\nDesconto: - ${fmtMoney(v.desconto)}` : '';
-  const msg   = `*${loja}*\n\n*RECIBO DE VENDA #${v.id}*\n${new Date(v.data).toLocaleString('pt-BR')}\n\n${itens}${desc}\n\n*TOTAL: ${fmtMoney(v.total)}*\nPagamento: ${v.pgto}\n\nObrigado pela preferencia! &#128150;`;
+  const msg   = `*${loja}*\n\n*RECIBO DE VENDA #${v.id}*\n${new Date(v.data).toLocaleString('pt-BR')}\n\n${itens}${desc}\n\n*TOTAL: ${fmtMoney(v.total)}*\nPagamento: ${v.pgto}\n\nObrigado pela preferencia!`;
   window.open('https://wa.me/55' + tel.replace(/\D/g, '') + '?text=' + encodeURIComponent(msg), '_blank');
 }
 
