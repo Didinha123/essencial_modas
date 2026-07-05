@@ -2,7 +2,7 @@
 // LojaFacil - scripts.js (Google Sheets)
 // ================================================
 
-const APPS_SCRIPT_URL = 'AKfycbzNaePYnFV-KG9X36UsBJX-jAKcBe8UW2rr2u1EzwQ5YI-T3msXF95szoX3Q3QEl5Claw';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzNaePYnFV-KG9X36UsBJX-jAKcBe8UW2rr2u1EzwQ5YI-T3msXF95szoX3Q3QEl5Claw/exec';
 
 async function api(action, payload = {}) {
   try {
