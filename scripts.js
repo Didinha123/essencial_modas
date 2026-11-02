@@ -93,6 +93,7 @@ const ACTIONS = {
   },
   getVenda: ({ id }) => run(sb.from('vendas').select('*').eq('id', id).single()),
   registrarVenda: v => run(sb.rpc('registrar_venda', { p: v })),
+  excluirVenda: ({ id }) => run(sb.rpc('excluir_venda', { p_id: id })),
 
   async relatorio({ ini, fim, pgto }) {
     let qr = sb.from('vendas').select('*');
@@ -143,6 +144,7 @@ let cfg = {};
 let produtosCache = [];
 let clientesMap = {};
 let parcelasCache = [];
+let vendasCache = [];
 let chartVendas = null;
 let chartPgto = null;
 
@@ -1074,6 +1076,7 @@ async function carregarVendas() {
   const q    = (document.getElementById('search-venda') || {}).value || '';
   const data = (document.getElementById('filter-data')  || {}).value || '';
   const vendas = await api('listarVendas', { q, data }).catch(() => []);
+  vendasCache = vendas;
   const el = document.getElementById('table-vendas');
   if (!el) return;
   el.innerHTML = vendas.length
@@ -1086,9 +1089,31 @@ async function carregarVendas() {
          <td style="color:var(--muted)">${fmtMoney(v.subtotal)}</td>
          <td style="color:var(--danger)">${v.desconto > 0 ? '- ' + fmtMoney(v.desconto) : '-'}</td>
          <td><b style="color:var(--p1)">${fmtMoney(v.total)}</b></td>
-         <td><button class="btn btn-sm btn-outline" onclick="abrirConferencia(${v.id})">Conferencia</button></td>
+         <td style="white-space:nowrap">
+           <button class="btn btn-sm btn-outline" onclick="abrirConferencia(${v.id})">Conferencia</button>
+           <button class="btn btn-sm btn-ghost" onclick="excluirVenda(${v.id})">Excluir</button>
+         </td>
        </tr>`).join('')}</tbody></table>`
     : '<div class="empty-state"><div class="es-icon">&#128203;</div><div class="es-text">Nenhuma venda encontrada.</div></div>';
+}
+
+async function excluirVenda(id) {
+  const v = vendasCache.find(x => x.id === id);
+  if (!v) return;
+  const pecas = (v.itens || []).reduce((s, i) => s + i.qty, 0);
+  let aviso = `Excluir a venda #${v.id} (${v.cliente || 'Consumidor final'} - ${fmtMoney(v.total)})?\n\n`
+            + `- ${pecas} peca(s) voltam para o estoque\n- Os lancamentos dessa venda saem do Financeiro`;
+  if (v.forma === 'boleto') {
+    const parcs = await api('parcelasDaVenda', { vendaId: id }).catch(() => []);
+    const pagas = parcs.filter(p => p.pago_em);
+    aviso += `\n- ${parcs.length} parcela(s) do crediario serao apagadas`;
+    if (pagas.length) aviso += `\n\nATENCAO: ${pagas.length} parcela(s) ja foram pagas (${fmtMoney(pagas.reduce((s, p) => s + +p.valor, 0))}).`;
+  }
+  if (!confirm(aviso + '\n\nEssa acao nao pode ser desfeita.')) return;
+  const ok = await api('excluirVenda', { id }).then(() => true).catch(() => false);
+  if (!ok) return;
+  toast('Venda excluida.', 3000, 'success');
+  carregarVendas();
 }
 
 // ── RELATORIO ────────────────────────────────────
