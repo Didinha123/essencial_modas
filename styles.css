@@ -212,9 +212,35 @@ tbody tr:last-child td { border-bottom: none; }
 .alert-text { font-size: 0.85rem; font-weight: 600; color: #8B6914; }
 .alert-bar.danger .alert-text { color: #991B1B; }
 
+/* CONFERENCIA */
+.modal.modal-lg { max-width: 820px; }
+.conf-report { font-size: 0.86rem; color: var(--text); background: #fff; }
+.conf-head { display: flex; justify-content: space-between; gap: 16px; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 2px solid var(--p1); }
+.conf-loja { font-size: 1.05rem; font-weight: 800; }
+.conf-title { font-weight: 800; letter-spacing: 0.04em; }
+.conf-sub { color: var(--muted); font-size: 0.78rem; }
+.conf-info { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px 16px; margin-bottom: 6px; }
+.conf-report h4 { font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--p2); margin: 14px 0 6px; }
+.conf-report table { font-size: 0.82rem; }
+.conf-report thead th, .conf-report tbody td, .conf-report tfoot td { padding: 6px 8px; white-space: nowrap; }
+.conf-report td.conf-prod { white-space: normal; }
+.conf-report tfoot td { border-top: 2px solid var(--border); font-weight: 700; }
+.conf-report tr.conf-atual td { background: #fdf3d7; font-weight: 700; }
+.conf-check { display: inline-block; width: 14px; height: 14px; border: 1.5px solid #555; border-radius: 3px; vertical-align: middle; }
+.conf-resumo { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+.conf-resumo div { border: 1px solid var(--border); border-radius: 8px; padding: 8px; text-align: center; font-size: 0.74rem; color: var(--muted); }
+.conf-resumo b { display: block; font-size: 1rem; color: var(--text); margin-top: 2px; }
+.conf-assin { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 48px; }
+.conf-assin div { border-top: 1px solid #555; padding-top: 4px; text-align: center; font-size: 0.78rem; color: var(--muted); }
+
 /* PRINT */
 .print-area { display: none; }
-@media print { body > * { display: none !important; } .print-area { display: block !important; } }
+@media print {
+  body > * { display: none !important; }
+  .print-area { display: block !important; }
+  .conf-report { font-size: 10.5pt; }
+  .conf-report tr.conf-atual td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
 
 /* RESPONSIVE */
 @media (max-width: 900px) {
