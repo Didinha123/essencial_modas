@@ -151,6 +151,8 @@ let chartPgto = null;
 // ── INIT ─────────────────────────────────────────
 window.onload = async () => {
   renderClock();
+  Chart.defaults.font.family = "'Inter', 'Segoe UI', system-ui, sans-serif";
+  Chart.defaults.color = '#8B887F';
   if (SUPABASE_URL.includes('SEU-PROJETO')) toast('Configure SUPABASE_URL e SUPABASE_ANON_KEY no scripts.js', 8000, 'danger');
   cfg = await api('getConfig').catch(() => ({}));
   loadConfigUI();
@@ -161,29 +163,27 @@ window.onload = async () => {
 
 // ── NAVEGAÇÃO ────────────────────────────────────
 const PAGE_META = {
-  dashboard:    ['Dashboard', 'Visao geral da loja'],
+  dashboard:    ['Dashboard', 'Visão geral da loja'],
   pdv:          ['Ponto de Venda', 'Registre novas vendas'],
-  produtos:     ['Produtos', 'Catalogo e estoque'],
+  produtos:     ['Produtos', 'Catálogo e estoque'],
   clientes:     ['Clientes', 'Base de clientes'],
-  funcionarios: ['Funcionarios', 'Equipe da loja'],
+  funcionarios: ['Funcionários', 'Equipe da loja'],
   financeiro:   ['Financeiro', 'Receitas, despesas e saldo'],
-  parcelas:     ['Crediario', 'Parcelas a receber'],
-  vendas:       ['Historico de Vendas', 'Todas as vendas'],
-  relatorio:    ['Relatorios', 'Analise de desempenho'],
-  config:       ['Configuracoes', 'Dados da loja']
+  parcelas:     ['Crediário', 'Parcelas a receber'],
+  vendas:       ['Histórico de vendas', 'Todas as vendas'],
+  relatorio:    ['Relatórios', 'Análise de desempenho'],
+  config:       ['Configurações', 'Dados da loja']
 };
-
-const PAGE_ORDER = ['dashboard','pdv','produtos','clientes','funcionarios','financeiro','parcelas','vendas','relatorio','config'];
 
 function nav(section) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('#sidebar nav a').forEach(a => a.classList.remove('active'));
+  document.querySelectorAll('#sidebar nav a').forEach(a => a.classList.toggle('active', a.dataset.sec === section));
   document.getElementById('sec-' + section).classList.add('active');
   const [title, sub] = PAGE_META[section] || [section, ''];
   document.getElementById('page-title').textContent = title;
   document.getElementById('page-sub').textContent   = sub;
-  const idx = PAGE_ORDER.indexOf(section);
-  if (idx >= 0) document.querySelectorAll('#sidebar nav a')[idx].classList.add('active');
+  toggleSidebar(false);
+  window.scrollTo(0, 0);
   if (section === 'dashboard')    renderDashboard();
   if (section === 'produtos')     carregarProdutos();
   if (section === 'clientes')     { carregarClientes(); carregarClientesPDV(); }
@@ -202,10 +202,19 @@ function toggleForm(id) {
 
 // ── RELOGIO ──────────────────────────────────────
 function renderClock() {
-  setInterval(() => {
-    const el = document.getElementById('clock');
-    if (el) el.textContent = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-  }, 1000);
+  const tick = () => {
+    const now = new Date();
+    document.getElementById('clock').textContent = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const dt = now.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' }).replace(/\./g, '');
+    document.getElementById('today').textContent = dt.charAt(0).toUpperCase() + dt.slice(1);
+  };
+  tick();
+  setInterval(tick, 1000);
+}
+
+// Menu lateral no celular
+function toggleSidebar(open) {
+  document.body.classList.toggle('nav-open', open);
 }
 
 // ── TOAST ────────────────────────────────────────
@@ -255,39 +264,39 @@ async function renderDashboard() {
   const vencidas   = parcs.filter(p => !p.pago_em && p.vencimento < hoje);
 
   let alertsHTML = '';
-  if (vencidas.length) alertsHTML += `<div class="alert-bar danger" style="cursor:pointer" onclick="nav('parcelas')"><span class="alert-text">${vencidas.length} parcela(s) vencida(s) no crediario - ${fmtMoney(vencidas.reduce((s, p) => s + +p.valor, 0))}</span></div>`;
+  if (vencidas.length) alertsHTML += `<div class="alert-bar danger" style="cursor:pointer" onclick="nav('parcelas')"><span class="alert-text">${vencidas.length} parcela(s) vencida(s) no crediário - ${fmtMoney(vencidas.reduce((s, p) => s + +p.valor, 0))}</span></div>`;
   if (semEstoque > 0) alertsHTML += `<div class="alert-bar danger"><span class="alert-text">${semEstoque} produto(s) sem estoque!</span></div>`;
   if (estBaixo   > 0) alertsHTML += `<div class="alert-bar"><span class="alert-text">${estBaixo} produto(s) com estoque baixo (5 ou menos)</span></div>`;
   document.getElementById('dash-alerts').innerHTML = alertsHTML;
 
   document.getElementById('kpi-row').innerHTML = `
     <div class="kpi-card green">
-      <div class="kpi-icon">&#128176;</div>
+      <div class="kpi-icon"><svg class="ic"><use href="#i-banknote"/></svg></div>
       <div class="kpi-val">${fmtMoney(totalHoje)}</div>
-      <div class="kpi-label">Vendas Hoje</div>
+      <div class="kpi-label">Vendas hoje</div>
       <div class="kpi-trend up">${vHoje.length} pedidos</div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-icon">&#128200;</div>
+      <div class="kpi-icon"><svg class="ic"><use href="#i-trending"/></svg></div>
       <div class="kpi-val">${fmtMoney(totalGeral)}</div>
-      <div class="kpi-label">Total Geral</div>
+      <div class="kpi-label">Total geral</div>
       <div class="kpi-trend up">${vendas.length} vendas</div>
     </div>
     <div class="kpi-card blue">
-      <div class="kpi-icon">&#128101;</div>
+      <div class="kpi-icon"><svg class="ic"><use href="#i-users"/></svg></div>
       <div class="kpi-val">${clis.length}</div>
       <div class="kpi-label">Clientes</div>
     </div>
     <div class="kpi-card amber">
-      <div class="kpi-icon">&#128230;</div>
+      <div class="kpi-icon"><svg class="ic"><use href="#i-package"/></svg></div>
       <div class="kpi-val">${prods.length}</div>
       <div class="kpi-label">Produtos</div>
       ${semEstoque > 0 ? `<div class="kpi-trend down">${semEstoque} sem estoque</div>` : ''}
     </div>
     <div class="kpi-card ${fin.saldo >= 0 ? 'green' : 'red'}">
-      <div class="kpi-icon">&#128181;</div>
+      <div class="kpi-icon"><svg class="ic"><use href="#i-wallet"/></svg></div>
       <div class="kpi-val">${fmtMoney(fin.saldo)}</div>
-      <div class="kpi-label">Saldo Caixa</div>
+      <div class="kpi-label">Saldo em caixa</div>
     </div>`;
 
   const porDia = {};
@@ -303,14 +312,17 @@ async function renderDashboard() {
     type: 'bar',
     data: {
       labels: labels7,
-      datasets: [{ label: 'Vendas', data: vals7, backgroundColor: 'rgba(201,168,76,0.2)', borderColor: '#C9A84C', borderWidth: 2, borderRadius: 6 }]
+      datasets: [{ label: 'Vendas', data: vals7, backgroundColor: '#C9A84C', hoverBackgroundColor: '#A8862F', borderRadius: 6, maxBarThickness: 38 }]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      plugins: {
+        legend: { display: false },
+        tooltip: { backgroundColor: '#18181B', padding: 10, cornerRadius: 8, displayColors: false, callbacks: { label: c => fmtMoney(c.parsed.y) } }
+      },
       scales: {
-        y: { ticks: { callback: v => 'R$' + v }, grid: { color: 'rgba(0,0,0,.05)' } },
-        x: { grid: { display: false } }
+        y: { beginAtZero: true, suggestedMax: 100, border: { display: false }, ticks: { precision: 0, maxTicksLimit: 5, callback: v => 'R$ ' + v.toLocaleString('pt-BR') }, grid: { color: '#EFEDE8' } },
+        x: { border: { display: false }, grid: { display: false } }
       }
     }
   });
@@ -318,14 +330,22 @@ async function renderDashboard() {
   const pgtoMap = {};
   vendas.forEach(v => { const k = v.forma || (v.pgto || '').split(' ')[0]; pgtoMap[k] = (pgtoMap[k] || 0) + +v.total; });
   if (chartPgto) chartPgto.destroy();
+  const canvasPgto = document.getElementById('chart-pgto');
+  canvasPgto.parentElement.toggleAttribute('data-empty', !Object.keys(pgtoMap).length);
   if (Object.keys(pgtoMap).length) {
-    chartPgto = new Chart(document.getElementById('chart-pgto').getContext('2d'), {
+    chartPgto = new Chart(canvasPgto.getContext('2d'), {
       type: 'doughnut',
       data: {
-        labels: Object.keys(pgtoMap),
-        datasets: [{ data: Object.values(pgtoMap), backgroundColor: ['#C9A84C','#8B6914','#10B981','#F59E0B','#3B82F6','#EF4444'], borderWidth: 2, borderColor: '#fff' }]
+        labels: Object.keys(pgtoMap).map(k => k.charAt(0).toUpperCase() + k.slice(1)),
+        datasets: [{ data: Object.values(pgtoMap), backgroundColor: ['#C9A84C','#18181B','#16A34A','#A8862F','#71717A','#E9CF85'], borderWidth: 3, borderColor: '#fff', hoverOffset: 4 }]
       },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 10 } } } }
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '68%',
+        plugins: {
+          legend: { position: 'bottom', labels: { font: { size: 12 }, padding: 14, usePointStyle: true, pointStyle: 'circle', boxWidth: 8 } },
+          tooltip: { backgroundColor: '#18181B', padding: 10, cornerRadius: 8, callbacks: { label: c => ' ' + c.label + ': ' + fmtMoney(c.parsed) } }
+        }
+      }
     });
   }
 
@@ -339,14 +359,14 @@ async function renderDashboard() {
          <td style="color:var(--muted)">${(v.itens || []).length} itens</td>
          <td><b style="color:var(--p1)">${fmtMoney(v.total)}</b></td>
        </tr>`).join('')}</tbody></table>`
-    : '<div class="empty-state"><div class="es-icon">&#128203;</div><div class="es-text">Nenhuma venda registrada.</div></div>';
+    : '<div class="empty-state"><div class="es-icon"><svg class="ic"><use href="#i-clipboard"/></svg></div><div class="es-text">Nenhuma venda registrada.</div></div>';
 }
 
 // ── PRODUTOS ─────────────────────────────────────
 async function salvarProduto() {
   const nome  = document.getElementById('p-nome').value.trim();
   const preco = parseFloat(document.getElementById('p-preco').value);
-  if (!nome || !preco) { toast('Preencha nome e preco!'); return; }
+  if (!nome || !preco) { toast('Preencha nome e preço!'); return; }
   await api('salvarProduto', {
     nome,
     categoria: document.getElementById('p-cat').value,
@@ -369,7 +389,7 @@ async function carregarProdutos() {
   const el = document.getElementById('table-produtos');
   if (!el) return;
   el.innerHTML = prods.length
-    ? `<table><thead><tr><th>Codigo</th><th>Nome</th><th>Cat.</th><th>Tam.</th><th>Cor</th><th>Custo</th><th>Preco</th><th>Margem</th><th>Estoque</th><th>Acoes</th></tr></thead><tbody>
+    ? `<table><thead><tr><th>Código</th><th>Nome</th><th>Cat.</th><th>Tam.</th><th>Cor</th><th>Custo</th><th>Preço</th><th>Margem</th><th>Estoque</th><th>Ações</th></tr></thead><tbody>
        ${prods.map(p => {
          const margem     = p.custo > 0 ? ((p.preco - p.custo) / p.custo * 100).toFixed(1) + '%' : '-';
          const estoqClass = p.estoque > 5 ? 'badge-success' : p.estoque > 0 ? 'badge-warning' : 'badge-danger';
@@ -386,7 +406,7 @@ async function carregarProdutos() {
            </td>
          </tr>`;
        }).join('')}</tbody></table>`
-    : '<div class="empty-state"><div class="es-icon">&#128230;</div><div class="es-text">Nenhum produto cadastrado.</div></div>';
+    : '<div class="empty-state"><div class="es-icon"><svg class="ic"><use href="#i-package"/></svg></div><div class="es-text">Nenhum produto cadastrado.</div></div>';
 }
 
 async function deletarProduto(id) {
@@ -451,7 +471,7 @@ async function carregarClientes() {
   const el   = document.getElementById('table-clientes');
   if (!el) return;
   el.innerHTML = clis.length
-    ? `<table><thead><tr><th>Nome</th><th>CPF</th><th>Telefone</th><th>E-mail</th><th>Aniversario</th><th>Acoes</th></tr></thead><tbody>
+    ? `<table><thead><tr><th>Nome</th><th>CPF</th><th>Telefone</th><th>E-mail</th><th>Aniversário</th><th>Ações</th></tr></thead><tbody>
        ${clis.map(c => `<tr>
          <td><b>${esc(c.nome)}</b></td><td>${esc(c.cpf || '-')}</td><td>${esc(c.tel || '-')}</td><td>${esc(c.email || '-')}</td>
          <td>${fmtDate(c.nasc)}</td>
@@ -460,7 +480,7 @@ async function carregarClientes() {
            <button class="btn btn-sm btn-ghost" onclick="deletarCliente(${c.id})">Excluir</button>
          </td>
        </tr>`).join('')}</tbody></table>`
-    : '<div class="empty-state"><div class="es-icon">&#128101;</div><div class="es-text">Nenhum cliente cadastrado.</div></div>';
+    : '<div class="empty-state"><div class="es-icon"><svg class="ic"><use href="#i-users"/></svg></div><div class="es-text">Nenhum cliente cadastrado.</div></div>';
   clis.forEach(c => clientesMap[c.id] = c);
 }
 
@@ -489,7 +509,7 @@ async function telCliente(id) {
 
 function whatsappCliente(id) {
   const c = clientesMap[id];
-  if (c) whatsapp(c.tel, 'Ola ' + c.nome + '!');
+  if (c) whatsapp(c.tel, 'Olá ' + c.nome + '!');
 }
 
 async function deletarCliente(id) {
@@ -513,7 +533,7 @@ async function salvarFuncionario() {
     comissao: document.getElementById('f-comissao').value || 0,
     email:    document.getElementById('f-email').value
   });
-  toast('Funcionario salvo!', 3000, 'success');
+  toast('Funcionário salvo!', 3000, 'success');
   ['f-nome','f-cpf','f-tel','f-salario','f-admissao','f-comissao','f-email'].forEach(id => document.getElementById(id).value = '');
   carregarFuncionarios();
 }
@@ -524,7 +544,7 @@ async function carregarFuncionarios() {
   const el    = document.getElementById('table-funcionarios');
   if (!el) return;
   el.innerHTML = funcs.length
-    ? `<table><thead><tr><th>Nome</th><th>Cargo</th><th>Salario</th><th>Comissao</th><th>Admissao</th><th>Acoes</th></tr></thead><tbody>
+    ? `<table><thead><tr><th>Nome</th><th>Cargo</th><th>Salário</th><th>Comissão</th><th>Admissão</th><th>Ações</th></tr></thead><tbody>
        ${funcs.map(f => `<tr>
          <td><b>${esc(f.nome)}</b><br><span style="font-size:.78rem;color:var(--muted)">${esc(f.email || '')}</span></td>
          <td><span class="badge badge-purple">${esc(f.cargo)}</span></td>
@@ -533,11 +553,11 @@ async function carregarFuncionarios() {
          <td>${fmtDate(f.admissao)}</td>
          <td><button class="btn btn-sm btn-ghost" onclick="deletarFuncionario(${f.id})">Excluir</button></td>
        </tr>`).join('')}</tbody></table>`
-    : '<div class="empty-state"><div class="es-icon">&#128100;</div><div class="es-text">Nenhum funcionario cadastrado.</div></div>';
+    : '<div class="empty-state"><div class="es-icon"><svg class="ic"><use href="#i-user"/></svg></div><div class="es-text">Nenhum funcionário cadastrado.</div></div>';
 }
 
 async function deletarFuncionario(id) {
-  if (!confirm('Remover funcionario?')) return;
+  if (!confirm('Remover funcionário?')) return;
   await api('deletarFuncionario', { id });
   toast('Removido.');
   carregarFuncionarios();
@@ -547,7 +567,7 @@ async function deletarFuncionario(id) {
 async function salvarFinanceiro() {
   const valor = parseFloat(document.getElementById('fin-valor').value);
   const desc  = document.getElementById('fin-desc').value.trim();
-  if (!valor || !desc) { toast('Preencha valor e descricao!'); return; }
+  if (!valor || !desc) { toast('Preencha valor e descrição!'); return; }
   await api('salvarFinanceiro', {
     tipo:      document.getElementById('fin-tipo').value,
     categoria: document.getElementById('fin-cat').value,
@@ -555,7 +575,7 @@ async function salvarFinanceiro() {
     valor,
     data: document.getElementById('fin-data').value
   });
-  toast('Lancamento salvo!', 3000, 'success');
+  toast('Lançamento salvo!', 3000, 'success');
   ['fin-valor','fin-desc'].forEach(id => document.getElementById(id).value = '');
   carregarFinanceiro();
   carregarResumoFin();
@@ -578,7 +598,7 @@ async function carregarFinanceiro() {
   const el   = document.getElementById('table-financeiro');
   if (!el) return;
   el.innerHTML = rows.length
-    ? `<table><thead><tr><th>Data</th><th>Tipo</th><th>Categoria</th><th>Descricao</th><th>Valor</th><th>Acoes</th></tr></thead><tbody>
+    ? `<table><thead><tr><th>Data</th><th>Tipo</th><th>Categoria</th><th>Descrição</th><th>Valor</th><th>Ações</th></tr></thead><tbody>
        ${rows.map(f => {
          const isRec = f.tipo === 'Receita';
          return `<tr>
@@ -590,11 +610,11 @@ async function carregarFinanceiro() {
            <td><button class="btn btn-sm btn-ghost" onclick="deletarFinanceiro(${f.id})">Excluir</button></td>
          </tr>`;
        }).join('')}</tbody></table>`
-    : '<div class="empty-state"><div class="es-icon">&#128176;</div><div class="es-text">Nenhum lancamento encontrado.</div></div>';
+    : '<div class="empty-state"><div class="es-icon"><svg class="ic"><use href="#i-banknote"/></svg></div><div class="es-text">Nenhum lançamento encontrado.</div></div>';
 }
 
 async function deletarFinanceiro(id) {
-  if (!confirm('Remover lancamento?')) return;
+  if (!confirm('Remover lançamento?')) return;
   await api('deletarFinanceiro', { id });
   toast('Removido.');
   carregarFinanceiro();
@@ -662,7 +682,7 @@ function renderCart() {
             <button class="btn btn-ghost btn-sm" onclick="removeFromCart(${i})" style="color:var(--danger)">X</button>
           </div>
         </div>`).join('')
-    : '<div class="empty-state" style="padding:24px"><div class="es-icon" style="font-size:1.8rem">&#128722;</div><div class="es-text">Carrinho vazio</div></div>';
+    : '<div class="empty-state" style="padding:24px"><div class="es-icon" style="font-size:1.8rem"><svg class="ic"><use href="#i-cart"/></svg></div><div class="es-text">Carrinho vazio</div></div>';
   renderTotal();
 }
 
@@ -731,7 +751,7 @@ async function finalizarVenda() {
     const jMap = { 1: 0, 2: +(cfg.j2||0), 3: +(cfg.j3||2), 6: +(cfg.j6||4), 12: +(cfg.j12||8) };
     const pct  = jMap[parc] || 0;
     total = total * (1 + pct / 100);
-    jurosInfo = parc > 1 ? ` (${parc}x - ${pct}% juros)` : ' (a vista)';
+    jurosInfo = parc > 1 ? ` (${parc}x - ${pct}% juros)` : ' (à vista)';
   }
   if (pgtoAtual === 'boleto') {
     if (!clienteId) { toast('Selecione o cliente para vender no boleto!'); return; }
@@ -774,7 +794,7 @@ async function finalizarVenda() {
 function showModalVenda(v) {
   const loja = cfg.nome || 'Essencial Modas';
   const parcs = v.parcelas || [];
-  document.getElementById('modal-venda-title').textContent = 'Venda Finalizada!';
+  document.getElementById('modal-venda-title').textContent = 'Venda finalizada!';
   document.getElementById('modal-venda-body').innerHTML = `
     <div class="nota" id="nota-content">
       <div class="nota-header">
@@ -794,18 +814,18 @@ function showModalVenda(v) {
       ${parcs.length ? `<div class="nota-total">
         ${parcs.map(p => `<div class="nota-row"><span>Parcela ${p.numero}/${p.total_parcelas} - venc. ${fmtDate(p.vencimento)}</span><span>${fmtMoney(p.valor)}</span></div>`).join('')}
       </div>` : ''}
-      <div class="nota-footer">Obrigado pela preferencia!</div>
+      <div class="nota-footer">Obrigado pela preferência!</div>
     </div>`;
 
   // Salva venda atual globalmente para uso no botão WhatsApp
   window._vendaAtual = v;
 
   const btnWhats = v.cliente_id
-    ? `<button class="btn btn-success" onclick="enviarWhatsappRecibo()">&#128262; WhatsApp</button>`
+    ? `<button class="btn btn-success" onclick="enviarWhatsappRecibo()"><svg class="ic"><use href="#i-whatsapp"/></svg> WhatsApp</button>`
     : '';
 
   document.getElementById('modal-venda-actions').innerHTML = `
-    <button class="btn btn-primary" onclick="imprimirNota()">Imprimir Recibo</button>
+    <button class="btn btn-primary" onclick="imprimirNota()"><svg class="ic"><use href="#i-printer"/></svg> Imprimir recibo</button>
     ${btnWhats}
     <button class="btn btn-outline" onclick="closeModal('modal-venda')">Fechar</button>`;
 
@@ -822,7 +842,7 @@ async function enviarWhatsappRecibo() {
   const parcs = (v.parcelas || []).length
     ? '\n\n*Parcelas:*\n' + v.parcelas.map(p => `  ${p.numero}/${p.total_parcelas} - venc. ${fmtDate(p.vencimento)} - ${fmtMoney(p.valor)}`).join('\n')
     : '';
-  const msg   = `*${loja}*\n\n*RECIBO DE VENDA #${v.id}*\n${new Date(v.data).toLocaleString('pt-BR')}\n\n${itens}${desc}\n\n*TOTAL: ${fmtMoney(v.total)}*\nPagamento: ${v.pgto}${parcs}\n\nObrigado pela preferencia!`;
+  const msg   = `*${loja}*\n\n*RECIBO DE VENDA #${v.id}*\n${new Date(v.data).toLocaleString('pt-BR')}\n\n${itens}${desc}\n\n*TOTAL: ${fmtMoney(v.total)}*\nPagamento: ${v.pgto}${parcs}\n\nObrigado pela preferência!`;
   enviarWhatsapp(await telCliente(v.cliente_id), msg);
 }
 
@@ -867,7 +887,7 @@ function renderParcelas() {
   const badge = { paga: 'badge-success', vencida: 'badge-danger', aberta: 'badge-warning' };
   const label = { paga: 'Paga', vencida: 'Vencida', aberta: 'Em aberto' };
   document.getElementById('table-parcelas').innerHTML = rows.length
-    ? `<table><thead><tr><th>Vencimento</th><th>Cliente</th><th>Venda</th><th>Parcela</th><th>Valor</th><th>Situacao</th><th>Acoes</th></tr></thead><tbody>
+    ? `<table><thead><tr><th>Vencimento</th><th>Cliente</th><th>Venda</th><th>Parcela</th><th>Valor</th><th>Situação</th><th>Ações</th></tr></thead><tbody>
        ${rows.map(p => {
          const st = statusParcela(p);
          return `<tr>
@@ -879,17 +899,17 @@ function renderParcelas() {
            <td><span class="badge ${badge[st]}">${label[st]}</span>${p.pago_em ? `<div style="font-size:.74rem;color:var(--muted);margin-top:2px">${fmtDate(diaLocal(p.pago_em))} - ${esc(p.forma_pgto || '')}</div>` : ''}</td>
            <td style="white-space:nowrap">
              ${p.pago_em ? '' : `<button class="btn btn-sm btn-success" onclick="receberParcela(${p.id})">Receber</button>`}
-             <button class="btn btn-sm btn-outline" onclick="abrirConferencia(${p.venda_id}, ${p.id})">Conferencia</button>
+             <button class="btn btn-sm btn-outline" onclick="abrirConferencia(${p.venda_id}, ${p.id})">Conferência</button>
            </td>
          </tr>`;
        }).join('')}</tbody></table>`
-    : '<div class="empty-state"><div class="es-icon">&#128197;</div><div class="es-text">Nenhuma parcela encontrada.</div></div>';
+    : '<div class="empty-state"><div class="es-icon"><svg class="ic"><use href="#i-calendar"/></svg></div><div class="es-text">Nenhuma parcela encontrada.</div></div>';
 }
 
 function receberParcela(id) {
   const p = parcelasCache.find(x => x.id === id);
   if (!p) return;
-  document.getElementById('modal-venda-title').textContent = 'Receber Parcela';
+  document.getElementById('modal-venda-title').textContent = 'Receber parcela';
   document.getElementById('modal-venda-body').innerHTML = `
     <div class="total-box" style="margin-bottom:16px">
       <div class="total-row"><span style="color:var(--muted)">Cliente</span><b>${esc((p.venda || {}).cliente || '-')}</b></div>
@@ -901,11 +921,11 @@ function receberParcela(id) {
       <label>Forma de recebimento</label>
       <select id="rec-forma">
         <option value="dinheiro">Dinheiro</option><option value="pix">Pix</option>
-        <option value="debito">Debito</option><option value="credito">Credito</option>
+        <option value="debito">Débito</option><option value="credito">Crédito</option>
       </select>
     </div>`;
   document.getElementById('modal-venda-actions').innerHTML = `
-    <button class="btn btn-success" id="btn-confirma-rec" onclick="confirmarRecebimento(${p.id}, ${p.venda_id})">Confirmar Recebimento</button>
+    <button class="btn btn-success" id="btn-confirma-rec" onclick="confirmarRecebimento(${p.id}, ${p.venda_id})"><svg class="ic"><use href="#i-check"/></svg> Confirmar recebimento</button>
     <button class="btn btn-outline" onclick="closeModal('modal-venda')">Cancelar</button>`;
   openModal('modal-venda');
 }
@@ -965,8 +985,8 @@ function htmlConferencia(conf) {
         <div class="conf-sub">${esc(cfg.tel || '')}</div>
       </div>
       <div style="text-align:right">
-        <div class="conf-title">CONFERENCIA DE PRODUTOS</div>
-        <div class="conf-sub">${r.comprovante ? `Comprovante de pagamento - Parcela ${r.atual.numero}/${r.atual.total_parcelas}` : 'Posicao do crediario'}</div>
+        <div class="conf-title">CONFERÊNCIA DE PRODUTOS</div>
+        <div class="conf-sub">${r.comprovante ? `Comprovante de pagamento - Parcela ${r.atual.numero}/${r.atual.total_parcelas}` : 'Posição do crediário'}</div>
         <div class="conf-sub">Emitido em ${new Date().toLocaleString('pt-BR')}</div>
       </div>
     </div>
@@ -980,7 +1000,7 @@ function htmlConferencia(conf) {
 
     <h4>Produtos da compra</h4>
     <table>
-      <thead><tr><th style="width:28px">Ok</th><th>Codigo</th><th>Produto</th><th>Tam / Cor</th><th style="text-align:center">Qtd</th><th style="text-align:right">Unit.</th><th style="text-align:right">Total</th></tr></thead>
+      <thead><tr><th style="width:28px">Ok</th><th>Código</th><th>Produto</th><th>Tam / Cor</th><th style="text-align:center">Qtd</th><th style="text-align:right">Unit.</th><th style="text-align:right">Total</th></tr></thead>
       <tbody>
         ${(v.itens || []).map(i => `<tr>
           <td><span class="conf-check"></span></td>
@@ -993,7 +1013,7 @@ function htmlConferencia(conf) {
         </tr>`).join('')}
       </tbody>
       <tfoot>
-        <tr><td colspan="4">Total de pecas</td><td style="text-align:center">${r.pecas}</td><td style="text-align:right">Subtotal</td><td style="text-align:right">${fmtMoney(v.subtotal)}</td></tr>
+        <tr><td colspan="4">Total de peças</td><td style="text-align:center">${r.pecas}</td><td style="text-align:right">Subtotal</td><td style="text-align:right">${fmtMoney(v.subtotal)}</td></tr>
         ${v.desconto > 0 ? `<tr><td colspan="6" style="text-align:right">Desconto</td><td style="text-align:right">- ${fmtMoney(v.desconto)}</td></tr>` : ''}
         <tr><td colspan="6" style="text-align:right">Total da compra</td><td style="text-align:right">${fmtMoney(v.total)}</td></tr>
       </tfoot>
@@ -1002,7 +1022,7 @@ function htmlConferencia(conf) {
     ${parcelas.length ? `
     <h4>Parcelas</h4>
     <table>
-      <thead><tr><th>Parcela</th><th>Vencimento</th><th style="text-align:right">Valor</th><th>Situacao</th></tr></thead>
+      <thead><tr><th>Parcela</th><th>Vencimento</th><th style="text-align:right">Valor</th><th>Situação</th></tr></thead>
       <tbody>
         ${parcelas.map(p => `<tr class="${p.id === conf.parcelaId ? 'conf-atual' : ''}">
           <td>${p.numero}/${p.total_parcelas}${p.id === conf.parcelaId && p.pago_em ? ' - paga agora' : ''}</td>
@@ -1037,8 +1057,8 @@ function textoConferencia(conf) {
   const r = resumoConferencia(conf);
   const linhas = [
     `*${cfg.nome || 'Essencial Modas'}*`,
-    '*CONFERENCIA DE PRODUTOS*',
-    r.comprovante ? `Comprovante de pagamento - Parcela ${r.atual.numero}/${r.atual.total_parcelas}` : 'Posicao do crediario',
+    '*CONFERÊNCIA DE PRODUTOS*',
+    r.comprovante ? `Comprovante de pagamento - Parcela ${r.atual.numero}/${r.atual.total_parcelas}` : 'Posição do crediário',
     '',
     `Cliente: ${v.cliente || '-'}`,
     `Venda #${v.id} - ${new Date(v.data).toLocaleDateString('pt-BR')}`,
@@ -1048,7 +1068,7 @@ function textoConferencia(conf) {
       const det = [i.tamanho, i.cor].filter(Boolean).join(' / ');
       return `${n + 1}. ${i.nome}${det ? ' (' + det + ')' : ''} x${i.qty} = ${fmtMoney(i.preco * i.qty)}`;
     }),
-    `Total de pecas: ${r.pecas}`,
+    `Total de peças: ${r.pecas}`,
     `Total da compra: ${fmtMoney(v.total)}`
   ];
   if (parcelas.length) {
@@ -1061,7 +1081,7 @@ function textoConferencia(conf) {
     if (r.comprovante) linhas.push(`*Valor pago: ${fmtMoney(r.atual.valor)}*`);
     linhas.push(`Total pago: ${fmtMoney(r.pago)}`, r.restantes ? `Saldo devedor: ${fmtMoney(r.saldo)} (${r.restantes} parcela(s))` : '*Compra QUITADA!*');
   }
-  linhas.push('', 'Por favor, confira os produtos acima. Obrigado pela preferencia!');
+  linhas.push('', 'Por favor, confira os produtos acima. Obrigado pela preferência!');
   return linhas.join('\n');
 }
 
@@ -1090,11 +1110,11 @@ async function carregarVendas() {
          <td style="color:var(--danger)">${v.desconto > 0 ? '- ' + fmtMoney(v.desconto) : '-'}</td>
          <td><b style="color:var(--p1)">${fmtMoney(v.total)}</b></td>
          <td style="white-space:nowrap">
-           <button class="btn btn-sm btn-outline" onclick="abrirConferencia(${v.id})">Conferencia</button>
+           <button class="btn btn-sm btn-outline" onclick="abrirConferencia(${v.id})">Conferência</button>
            <button class="btn btn-sm btn-ghost" onclick="excluirVenda(${v.id})">Excluir</button>
          </td>
        </tr>`).join('')}</tbody></table>`
-    : '<div class="empty-state"><div class="es-icon">&#128203;</div><div class="es-text">Nenhuma venda encontrada.</div></div>';
+    : '<div class="empty-state"><div class="es-icon"><svg class="ic"><use href="#i-clipboard"/></svg></div><div class="es-text">Nenhuma venda encontrada.</div></div>';
 }
 
 async function excluirVenda(id) {
@@ -1102,17 +1122,17 @@ async function excluirVenda(id) {
   if (!v) return;
   const pecas = (v.itens || []).reduce((s, i) => s + i.qty, 0);
   let aviso = `Excluir a venda #${v.id} (${v.cliente || 'Consumidor final'} - ${fmtMoney(v.total)})?\n\n`
-            + `- ${pecas} peca(s) voltam para o estoque\n- Os lancamentos dessa venda saem do Financeiro`;
+            + `- ${pecas} peça(s) voltam para o estoque\n- Os lançamentos dessa venda saem do Financeiro`;
   if (v.forma === 'boleto') {
     const parcs = await api('parcelasDaVenda', { vendaId: id }).catch(() => []);
     const pagas = parcs.filter(p => p.pago_em);
-    aviso += `\n- ${parcs.length} parcela(s) do crediario serao apagadas`;
-    if (pagas.length) aviso += `\n\nATENCAO: ${pagas.length} parcela(s) ja foram pagas (${fmtMoney(pagas.reduce((s, p) => s + +p.valor, 0))}).`;
+    aviso += `\n- ${parcs.length} parcela(s) do crediário serão apagadas`;
+    if (pagas.length) aviso += `\n\nATENÇÃO: ${pagas.length} parcela(s) já foram pagas (${fmtMoney(pagas.reduce((s, p) => s + +p.valor, 0))}).`;
   }
-  if (!confirm(aviso + '\n\nEssa acao nao pode ser desfeita.')) return;
+  if (!confirm(aviso + '\n\nEssa ação não pode ser desfeita.')) return;
   const ok = await api('excluirVenda', { id }).then(() => true).catch(() => false);
   if (!ok) return;
-  toast('Venda excluida.', 3000, 'success');
+  toast('Venda excluída.', 3000, 'success');
   carregarVendas();
 }
 
@@ -1123,18 +1143,18 @@ async function gerarRelatorio() {
     fim:  document.getElementById('rel-fim').value,
     pgto: document.getElementById('rel-pgto').value
   }).catch(() => null);
-  if (!rel) { toast('Erro ao gerar relatorio!'); return; }
+  if (!rel) { toast('Erro ao gerar relatório!'); return; }
 
   document.getElementById('rel-result').innerHTML = `
     <div class="kpi-grid" style="margin-bottom:20px">
-      <div class="kpi-card green"><div class="kpi-icon">&#128176;</div><div class="kpi-val">${fmtMoney(rel.total)}</div><div class="kpi-label">Total Vendas</div></div>
-      <div class="kpi-card"><div class="kpi-icon">&#128203;</div><div class="kpi-val">${rel.qtdVendas}</div><div class="kpi-label">Num. Vendas</div></div>
-      <div class="kpi-card amber"><div class="kpi-icon">&#128230;</div><div class="kpi-val">${rel.qtdItens}</div><div class="kpi-label">Pecas Vendidas</div></div>
-      <div class="kpi-card blue"><div class="kpi-icon">&#127919;</div><div class="kpi-val">${fmtMoney(rel.ticketMedio)}</div><div class="kpi-label">Ticket Medio</div></div>
+      <div class="kpi-card green"><div class="kpi-icon"><svg class="ic"><use href="#i-banknote"/></svg></div><div class="kpi-val">${fmtMoney(rel.total)}</div><div class="kpi-label">Total vendido</div></div>
+      <div class="kpi-card"><div class="kpi-icon"><svg class="ic"><use href="#i-clipboard"/></svg></div><div class="kpi-val">${rel.qtdVendas}</div><div class="kpi-label">Nº de vendas</div></div>
+      <div class="kpi-card amber"><div class="kpi-icon"><svg class="ic"><use href="#i-package"/></svg></div><div class="kpi-val">${rel.qtdItens}</div><div class="kpi-label">Peças vendidas</div></div>
+      <div class="kpi-card blue"><div class="kpi-icon"><svg class="ic"><use href="#i-target"/></svg></div><div class="kpi-val">${fmtMoney(rel.ticketMedio)}</div><div class="kpi-label">Ticket médio</div></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
       <div class="card">
-        <div class="card-title"><div class="ct-icon">&#128179;</div> Por Pagamento</div>
+        <div class="card-title"><div class="ct-icon"><svg class="ic"><use href="#i-card"/></svg></div> Por pagamento</div>
         <table><thead><tr><th>Tipo</th><th>Total</th><th>%</th></tr></thead><tbody>
         ${Object.entries(rel.porPgto).map(([k, v]) => `<tr>
           <td><span class="badge badge-purple">${esc(k)}</span></td>
@@ -1143,7 +1163,7 @@ async function gerarRelatorio() {
         </tr>`).join('')}</tbody></table>
       </div>
       <div class="card">
-        <div class="card-title"><div class="ct-icon">&#127942;</div> Mais Vendidos</div>
+        <div class="card-title"><div class="ct-icon"><svg class="ic"><use href="#i-award"/></svg></div> Mais vendidos</div>
         <table><thead><tr><th>Produto</th><th>Qtd</th><th>Total</th></tr></thead><tbody>
         ${Object.entries(rel.porProd).sort((a, b) => b[1].qty - a[1].qty).slice(0, 8).map(([k, v]) => `<tr>
           <td><b>${esc(k)}</b></td>
@@ -1172,7 +1192,7 @@ async function salvarConfigUI() {
   ['j2','j3','j6','j12'].forEach(k => c[k] = parseFloat((document.getElementById(k) || {}).value) || 0);
   await api('salvarConfig', c);
   cfg = c;
-  toast('Configuracoes salvas!', 3000, 'success');
+  toast('Configurações salvas!', 3000, 'success');
 }
 
 // ── UTILS ────────────────────────────────────────
