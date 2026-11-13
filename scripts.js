@@ -3,8 +3,8 @@
 // ================================================
 
 // Preencha com os dados do seu projeto: Supabase > Project Settings > API
-const SUPABASE_URL      = 'https://tdhwrjsvdnlpuykwdrth.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_F-7Q3HfYSbX4KyutqeaMFA_InWyZOj_';
+const SUPABASE_URL      = 'https://zpykjeqnmowkillckfhn.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_HP4zmNO6Bct0lMK0DItFkA_e4pDroyJ';
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
