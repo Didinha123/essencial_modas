@@ -3,8 +3,8 @@
 // ================================================
 
 // Preencha com os dados do seu projeto: Supabase > Project Settings > API
-const SUPABASE_URL      = 'https://zpykjeqnmowkillckfhn.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_HP4zmNO6Bct0lMK0DItFkA_e4pDroyJ';
+const SUPABASE_URL      = 'https://tdhwrjsvdnlpuykwdrth.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_F-7Q3HfYSbX4KyutqeaMFA_InWyZOj_';
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -52,6 +52,14 @@ const ACTIONS = {
     custo: +p.custo || 0, preco: +p.preco, estoque: parseInt(p.estoque) || 0,
     barcode: p.barcode || gerarBarcode()
   })),
+  atualizarProduto: p => {
+    const campos = {
+      nome: p.nome, categoria: p.categoria, tamanho: p.tamanho, cor: p.cor,
+      custo: +p.custo || 0, preco: +p.preco, estoque: parseInt(p.estoque) || 0
+    };
+    if (p.barcode) campos.barcode = p.barcode;
+    return run(sb.from('produtos').update(campos).eq('id', p.id));
+  },
   deletarProduto: ({ id }) => run(sb.from('produtos').delete().eq('id', id)),
 
   async listarClientes({ q = '' }) {
@@ -363,11 +371,42 @@ async function renderDashboard() {
 }
 
 // ── PRODUTOS ─────────────────────────────────────
+let produtoEditandoId = null;
+
+function novoProduto() {
+  cancelarProduto();
+  document.getElementById('form-produto').style.display = 'block';
+}
+
+function cancelarProduto() {
+  produtoEditandoId = null;
+  document.getElementById('p-form-title').textContent = 'Cadastrar produto';
+  ['p-nome','p-cor','p-custo','p-preco','p-estoque','p-barcode'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('form-produto').style.display = 'none';
+}
+
+function editarProduto(id) {
+  const p = produtosCache.find(x => x.id === id);
+  if (!p) return;
+  produtoEditandoId = id;
+  document.getElementById('p-nome').value    = p.nome || '';
+  document.getElementById('p-cat').value     = p.categoria || 'Outro';
+  document.getElementById('p-tam').value     = p.tamanho || 'Único';
+  document.getElementById('p-cor').value     = p.cor || '';
+  document.getElementById('p-custo').value   = p.custo ?? '';
+  document.getElementById('p-preco').value   = p.preco ?? '';
+  document.getElementById('p-estoque').value = p.estoque ?? 0;
+  document.getElementById('p-barcode').value = p.barcode || '';
+  document.getElementById('p-form-title').textContent = 'Editar produto';
+  document.getElementById('form-produto').style.display = 'block';
+  document.getElementById('form-produto').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 async function salvarProduto() {
   const nome  = document.getElementById('p-nome').value.trim();
   const preco = parseFloat(document.getElementById('p-preco').value);
   if (!nome || !preco) { toast('Preencha nome e preço!'); return; }
-  await api('salvarProduto', {
+  const dados = {
     nome,
     categoria: document.getElementById('p-cat').value,
     tamanho:   document.getElementById('p-tam').value,
@@ -376,9 +415,15 @@ async function salvarProduto() {
     preco,
     estoque:   document.getElementById('p-estoque').value || 0,
     barcode:   document.getElementById('p-barcode').value
-  });
-  toast('Produto salvo!', 3000, 'success');
-  ['p-nome','p-cor','p-custo','p-preco','p-estoque','p-barcode'].forEach(id => document.getElementById(id).value = '');
+  };
+  if (produtoEditandoId !== null) {
+    await api('atualizarProduto', { ...dados, id: produtoEditandoId });
+    toast('Produto atualizado!', 3000, 'success');
+  } else {
+    await api('salvarProduto', dados);
+    toast('Produto salvo!', 3000, 'success');
+  }
+  cancelarProduto();
   carregarProdutos();
 }
 
@@ -401,6 +446,7 @@ async function carregarProdutos() {
            <td><span class="badge badge-info">${margem}</span></td>
            <td><span class="badge ${estoqClass}">${p.estoque} un.</span></td>
            <td style="white-space:nowrap">
+             <button class="btn btn-sm btn-outline" onclick="editarProduto(${p.id})">Editar</button>
              <button class="btn btn-sm btn-outline" onclick="showEtiquetaId(${p.id})">Etiqueta</button>
              <button class="btn btn-sm btn-ghost" onclick="deletarProduto(${p.id})">Excluir</button>
            </td>
@@ -736,8 +782,12 @@ function calcBoleto() {
 
 function clearCart() { cart = []; renderCart(); }
 
+let finalizandoVenda = false;
+
 async function finalizarVenda() {
+  if (finalizandoVenda) return; // evita baixar o estoque duas vezes com clique duplo
   if (!cart.length) { toast('Carrinho vazio!'); return; }
+  finalizandoVenda = true;
   const clienteId = document.getElementById('pdv-cliente').value;
   const cliente   = clienteId ? (clientesMap[clienteId] || {}).nome || '' : '';
   const sub  = cart.reduce((s, i) => s + i.preco * i.qty, 0);
@@ -754,7 +804,7 @@ async function finalizarVenda() {
     jurosInfo = parc > 1 ? ` (${parc}x - ${pct}% juros)` : ' (à vista)';
   }
   if (pgtoAtual === 'boleto') {
-    if (!clienteId) { toast('Selecione o cliente para vender no boleto!'); return; }
+    if (!clienteId) { toast('Selecione o cliente para vender no boleto!'); finalizandoVenda = false; return; }
     const pct = parseFloat(document.getElementById('boleto-juros').value) || 0;
     parcelas   = parseInt(document.getElementById('boleto-parc').value) || 1;
     vencimento = document.getElementById('boleto-venc').value || addDias(30);
@@ -777,6 +827,7 @@ async function finalizarVenda() {
   };
 
   const r = await api('registrarVenda', venda).catch(() => null);
+  finalizandoVenda = false;
   if (!r) return;
 
   cart.forEach(item => {
@@ -791,6 +842,11 @@ async function finalizarVenda() {
 }
 
 // ── MODAL VENDA ───────────────────────────────────
+// Remove o percentual de juros do texto de pagamento (ex: "credito (3x - 4% juros)" -> "credito (3x)")
+function semJuros(pgto) {
+  return String(pgto || '').replace(/\s*-\s*\+?[\d.,]+%\s*juros/i, '');
+}
+
 function showModalVenda(v) {
   const loja = cfg.nome || 'Essencial Modas';
   const parcs = v.parcelas || [];
@@ -809,7 +865,7 @@ function showModalVenda(v) {
         <div class="nota-row"><span>Subtotal</span><span>${fmtMoney(v.subtotal)}</span></div>
         ${v.desconto > 0 ? `<div class="nota-row" style="color:var(--danger)"><span>Desconto</span><span>- ${fmtMoney(v.desconto)}</span></div>` : ''}
         <div class="nota-row" style="font-size:1.1rem;font-weight:800;color:var(--p1)"><span>TOTAL</span><span>${fmtMoney(v.total)}</span></div>
-        <div style="margin-top:6px;font-size:.88rem"><b>Pagamento:</b> ${esc(v.pgto)}</div>
+        <div style="margin-top:6px;font-size:.88rem"><b>Pagamento:</b> ${esc(semJuros(v.pgto))}</div>
       </div>
       ${parcs.length ? `<div class="nota-total">
         ${parcs.map(p => `<div class="nota-row"><span>Parcela ${p.numero}/${p.total_parcelas} - venc. ${fmtDate(p.vencimento)}</span><span>${fmtMoney(p.valor)}</span></div>`).join('')}
