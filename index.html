@@ -213,10 +213,10 @@
     <div id="sec-produtos" class="section">
       <div class="page-header">
         <div><h2>Produtos</h2><div class="ph-sub">Catálogo e estoque</div></div>
-        <button class="btn btn-primary" onclick="toggleForm('form-produto')"><svg class="ic"><use href="#i-plus"/></svg> Novo produto</button>
+        <button class="btn btn-primary" onclick="novoProduto()"><svg class="ic"><use href="#i-plus"/></svg> Novo produto</button>
       </div>
       <div class="card" id="form-produto" style="display:none">
-        <div class="card-title"><div class="ct-icon"><svg class="ic"><use href="#i-package"/></svg></div> Cadastrar produto</div>
+        <div class="card-title"><div class="ct-icon"><svg class="ic"><use href="#i-package"/></svg></div> <span id="p-form-title">Cadastrar produto</span></div>
         <div class="form-row">
           <div class="form-group"><label>Nome</label><input id="p-nome" placeholder="Ex: Camiseta básica"></div>
           <div class="form-group"><label>Categoria</label>
@@ -236,7 +236,7 @@
         <div class="btn-group">
           <button class="btn btn-primary" onclick="salvarProduto()"><svg class="ic"><use href="#i-save"/></svg> Salvar</button>
           <button class="btn btn-outline" onclick="imprimirEtiqueta()"><svg class="ic"><use href="#i-tag"/></svg> Gerar etiqueta</button>
-          <button class="btn btn-ghost" onclick="toggleForm('form-produto')">Cancelar</button>
+          <button class="btn btn-ghost" onclick="cancelarProduto()">Cancelar</button>
         </div>
       </div>
       <div class="card">
